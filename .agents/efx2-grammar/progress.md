@@ -3,9 +3,9 @@
 Single record of the work described in `plan.md`: one row per item with its commit, its numbers and the decisions taken, in Yannis's words where he decided. Updated with every item.
 
 **Last updated:** 2026-11-02, by the implementing thread.
-**Current phase:** 1. **Next item:** the phase 1 code-review pass.
+**Current phase:** 1. **Next item:** the gate 1 record, then Yannis's pass.
 
-Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYog1UT5iVMsq6aa (endorsed by the design thread; Yannis, 2026-11-02 01:02Z: "ok tell it it can start the work"); P1.1, https://claude.ai/artifact/7pHaXXZPeYoYAuBsMZbu5t (endorsed by the design thread with three remarks, all taken; Yannis, 2026-11-02 09:01Z: "ok go ahead"); P1.2, https://claude.ai/artifact/BoXwjmeNHTCFSSV8Uxrkrk (endorsed by the design thread, whose plan update is applied in the P1.2 commit; Yannis, 2026-11-02 09:33Z: "Agree, write it"); the phase 1 simplify pass, listed in the thread (Yannis, 2026-11-02 09:49Z: "Go ahead").
+Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYog1UT5iVMsq6aa (endorsed by the design thread; Yannis, 2026-11-02 01:02Z: "ok tell it it can start the work"); P1.1, https://claude.ai/artifact/7pHaXXZPeYoYAuBsMZbu5t (endorsed by the design thread with three remarks, all taken; Yannis, 2026-11-02 09:01Z: "ok go ahead"); P1.2, https://claude.ai/artifact/BoXwjmeNHTCFSSV8Uxrkrk (endorsed by the design thread, whose plan update is applied in the P1.2 commit; Yannis, 2026-11-02 09:33Z: "Agree, write it"); the phase 1 simplify pass, listed in the thread (Yannis, 2026-11-02 09:49Z: "Go ahead"); the phase 1 code-review fixes, listed in the thread (Yannis, 2026-11-02 10:09Z: "Go ahead", which also leaves the colour of `string(` to phase 2).
 
 ## Pins
 
@@ -26,6 +26,7 @@ Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYo
 | P1.2 Words from the lexer | done 2026-11-02 | 281d80f | 0 of 56 files; 288,185 of 464,118 tokens (62.1%, from 59.2%); 24 of the 105 kinds fully matched (from 18). Gains: As +3,485, Error +3,483, Assert +3,481, EndBlock +1,605, OtherAssetId +772, Template +153, CloseBracket +147, Has +75, No +75, Star +66, Scope +66, Comparison +49, Is +42, Not +38, VariablePrefix +31, In +18, OpenParenthesis +12, FieldId +2, Warning +2. Losses, all where the parser already reports errors: Comma −74, OpenBracket −34, When −15, With −11, Or −4, FOR −2. `keywords` 90 to 98. The sample still parses; its parse errors go from 106 to 117 (lines 78 and 79 had 7 each and have 13; line 43 has one fewer). Build with the baseline's 10 generator warnings | The three word lists are gone from `grammar/efx.grammar` (67 lines); `wordToken` in `src/efxWords.js` gives each word its kind. Sample highlighting: a fix, `or` at the start of `$orgid` and `$orgname` (line 8) is no longer read as a keyword, a defect of the typed list, which had no word boundary (Yannis, 09:26Z: "this is not a change. this is fixing a bug... correct?"); on the lines that already had parse errors (8, 41 to 43, 78, 79), 9 tokens are no longer shown as keywords and one `$orgname` loses its variable colour, as the design doc listed. The plan's design bullet, gate 1 and allowed-output row updated by the design thread's patch. Notes below |
 | Phase 1 simplify pass | done 2026-11-02 | 572d867 | Pins and the test's report unchanged (0 of 56 files, 288,185 tokens); the editor side has 4,311 fewer tokens over the corpus (559,986 to 555,675); generated files unchanged; build, test and sync green | Three changes over P1.1 and P1.2, two of them the design thread's remarks. Details below |
 | node_modules untracked | done 2026-11-02 | (this commit) | 100 files under `node_modules/` no longer tracked; the files on disk stay; build and test green | The repository tracked them from before this work, although `.gitignore` ignores the folder; both workflows install it with `npm ci`. Part of the phase 1 simplify pass, in a commit of its own (Yannis, 2026-11-02 09:22Z, to the design thread's suggestion: "i agree") |
+| Phase 1 code-review pass | done 2026-11-02 | (this commit) | 10 findings: 3 fixed, 1 left to phase 2 by Yannis, 6 not taken. Pins and the test's report unchanged; generated files unchanged; build, test and sync green | Details below |
 
 ## Decisions
 
@@ -109,6 +110,27 @@ Fixed:
 
 Not taken: `scripts/build.js` copying `efxTheme.js` twice and skipping a missing source file without a word (code from before this work; P1.2 only added two files to its list); `LexerWords.#keywords` lexing each candidate in `EXPRESSION` twice (once for the function test, once for the reserved test; all five word sets take 0.1 s).
 
+## Phase 1 code-review pass
+
+The code-review pass at medium effort over 37c1942^..HEAD, on the hand-written files; each finding checked against the corpus or a probe. Fixes agreed before coding (Yannis, 2026-11-02 10:09Z: "Go ahead").
+
+Fixed:
+
+- The sync stops, naming the rule, when the start of `builtInFunction` passes through a rule that is also used elsewhere or that can end before a token is read: the transitions met there would then read tokens for other rules too, and `keywords` would lose words silently. In the pinned `Efx.g4` the seven rules `builtInFunction` starts with are used nowhere else and none can be empty. Checked with a rule `probeShared : Comma stringFunction ;` added ("rule stringFunction is also used elsewhere"), and with an empty alternative through a new rule and in `builtInFunction` itself ("can end before a token is read"). `words.js` unchanged.
+- The build fails when a file it copies is missing from `src/`. It used to skip the file and report success, and since P1.2 the parser cannot load without `efxWords.js` and `generated/words.js`. Checked by removing `src/efxWords.js` in a copy.
+- The conformance test reads the corpus files by path, so a file name with `#`, `?` or `%` is read (checked with `a#1%20?.efx`), as the sync's download addresses since the gate 0 code-review pass.
+
+Left to phase 2 (Yannis, 10:09Z): a call of a function whose name is also a keyword shows in keyword colour. In today's grammar a keyword and a function name can both stand where a word of an expression stands, so `stack.canShift` allows both and the order in `wordToken` decides. Keywords first gives `${string(BT-01)}` a `Keyword` where 37c1942 gave `BuiltInFunction`, with no parse error before or after; function names first would give `${BT-01 is not present}` one parse error and `${not(BT-01 is present)}` two. In the corpus: `string(` 93 times (function colour before, keyword colour now), `number(` 51 and `text(` 33 times (an `Identifier` with a parse error before, a `Keyword` without one now); `not(`, 348 times, was a keyword before too. The sample has none. It is a phase 1 colour difference only, on corpus lines that already carry a parse error: the corpus has 26,769 such lines of 32,265, the same lines before and after P1.2, and every highlighting change of P1.2 is on one of them. The P1.2 design doc and its review missed it. P2.1 pins the trees of `string(BT-01)`, `BT-01 is not present` and `not(BT-01 is present)` (the design thread's remark).
+
+Not taken:
+
+- The uppercase spellings (`AND`, `IS`, `IF` ...) and the XPath axis words are no longer keywords: `EfxLexer.g4` spells its keywords in lower case only (`And: 'and'`), so this follows the grammar (rule 4).
+- Keywords inside template text: the old grammar read keywords there too (`is`, `in` and `notice` in `The date on the notice is in the value`); P1.2 adds the lexer's words (`date`, `on`, `value`). `TextBlock/Keyword` and `TextBlock/Identifier` have the same style, so nothing shows; phase 2 reads template text as the lexer does.
+- A parse error that starts where a leaf starts hides the leaf from the match: the P1.1 design counts each parse error as a token where it starts.
+- `Text`, `Number`, `Indicator`, `Date` and `Time` are mapped to `Type`, which never matches, since `Type` is `text:` with its colon: the table follows today's grammar, and phase 2 gives both sides the lexer's names.
+- `npm test` needs a build first: `test/run-tests.js` already read `dist/` at c77c153, and the workflow builds first.
+- `scripts/build.js` copies `efxTheme.js` twice: from before this work, as in the simplify pass.
+
 ## Gate results
 
 | Gate | Date | Numbers | Commit |
@@ -128,3 +150,4 @@ Measured 2026-11-02 on c77c153, Node 22.23.4, npm 10.9.9, `@lezer/generator` 1.8
 - The baseline entry-point defect above, for P4.1.
 - For the phase 1 simplify pass (design thread, review of 37c1942): `EditorTokens.#error` does not move past an error node that has no children, so its text is counted again as a token with no name. The pins are not affected. Fixed in the phase 1 simplify pass.
 - For the phase 1 simplify pass: the repository tracks 100 files under `node_modules/`, from before this work (also on OP-TED `main`), although `.gitignore` ignores the folder. To be untracked in a commit of their own (Yannis, 2026-11-02 09:22Z, to the design thread's suggestion that they are removed from tracking: "i agree"). Untracked in the commit after 572d867.
+- For P2.1 (phase 1 code-review pass, Yannis 10:09Z): pin the trees of `string(BT-01)`, `BT-01 is not present` and `not(BT-01 is present)`; today a call of `string`, `number` or `text` shows in keyword colour (details above).

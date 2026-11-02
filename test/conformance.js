@@ -3,6 +3,8 @@
 // parser built in dist/, so it runs after `npm run build`.
 
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { FileComparison } from './conformance/FileComparison.js';
 import { OracleTokens } from './conformance/OracleTokens.js';
 import { TokenNames } from './conformance/TokenNames.js';
@@ -11,10 +13,10 @@ import { TokenNames } from './conformance/TokenNames.js';
 // in either direction, until that commit updates them here.
 const PINNED = { files: 0, tokens: 288185 };
 
-const CORPUS = new URL('./corpus/', import.meta.url);
+const CORPUS = fileURLToPath(new URL('./corpus/', import.meta.url));
 
 const files = fs.readdirSync(CORPUS, { recursive: true }).filter((file) => file.endsWith('.efx')).sort();
-const comparisons = files.map((file) => new FileComparison(file, fs.readFileSync(new URL(file, CORPUS), 'utf8')));
+const comparisons = files.map((file) => new FileComparison(file, fs.readFileSync(path.join(CORPUS, file), 'utf8')));
 
 const counts = new Map();
 comparisons.forEach((comparison) => comparison.addCountsTo(counts));

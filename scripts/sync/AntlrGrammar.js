@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CharStream, CommonTokenStream, Token } from 'antlr4ng';
+import { CharStream, CommonTokenStream, RuleStopState, RuleTransition, Token } from 'antlr4ng';
 
 const ANTLR_NG = fileURLToPath(new URL('../../node_modules/antlr-ng/dist/cli/runner.js', import.meta.url));
 
@@ -86,7 +86,7 @@ export class AntlrGrammar {
   tokensReadOnlyAtStartOf(ruleName) {
     const parser = this.#parser();
     const { atn } = parser;
-    const opening = AntlrGrammar.#openingTransitions(AntlrGrammar.#startOf(parser, ruleName));
+    const opening = AntlrGrammar.#openingTransitions(parser, ruleName);
     const others = atn.states.flatMap((state) => state.transitions)
       .filter((transition) => !transition.isEpsilon && !opening.has(transition));
     const types = AntlrGrammar.#firstTypes(parser, ruleName).filter((type) =>
@@ -120,18 +120,29 @@ export class AntlrGrammar {
   }
 
   /**
-   * The transitions that read the first token after a state: those that read a token and that the
-   * parser reaches from the state without reading one, entering the rules it calls.
+   * The transitions that read the first token of a rule: those that read a token and that the
+   * parser reaches from the rule's start without reading one, entering the rules it starts with.
+   * They read the first token of this rule only, so the rules it enters on the way must be used
+   * nowhere else, and none of them may end before a token is read; the sync stops otherwise.
    */
-  static #openingTransitions(start) {
+  static #openingTransitions(parser, ruleName) {
+    const calls = parser.atn.states.flatMap((state) => state.transitions)
+      .filter((transition) => transition instanceof RuleTransition);
+    const isCalledElsewhere = (call) => calls.some((other) => other !== call && other.target === call.target);
     const opening = new Set();
     const visited = new Set();
-    const pending = [start];
+    const pending = [AntlrGrammar.#startOf(parser, ruleName)];
     while (pending.length > 0) {
       const state = pending.pop();
+      if (state instanceof RuleStopState) {
+        AntlrGrammar.#cannotTell(parser, ruleName, state.ruleIndex, 'can end before a token is read');
+      }
       if (!visited.has(state)) {
         visited.add(state);
         for (const transition of state.transitions) {
+          if (transition instanceof RuleTransition && isCalledElsewhere(transition)) {
+            AntlrGrammar.#cannotTell(parser, ruleName, transition.ruleIndex, 'is also used elsewhere');
+          }
           if (transition.isEpsilon) {
             pending.push(transition.target);
           } else {
@@ -141,6 +152,12 @@ export class AntlrGrammar {
       }
     }
     return opening;
+  }
+
+  /** Stops the sync when a rule met at the start of the given rule breaks #openingTransitions' assumption. */
+  static #cannotTell(parser, ruleName, ruleIndex, reason) {
+    throw new Error(`At the start of ${ruleName}, rule ${parser.ruleNames[ruleIndex]} ${reason}: `
+      + `the sync cannot tell which tokens the parser reads only as the first token of ${ruleName}`);
   }
 
   /** The index of a mode or rule, so that a name the grammar no longer has stops the sync. */

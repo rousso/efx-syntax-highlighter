@@ -16,15 +16,13 @@ try {
   console.log('Parser generated successfully in dist/.');
 
   // Copy all relevant JS files from src to dist (except parser)
-  // The parser loads efxWords.js, and efxWords.js loads generated/words.js, from dist/.
+  // The parser loads efxWords.js, and efxWords.js loads generated/words.js, from dist/. A file
+  // missing from src/ fails the build.
   const filesToCopy = ['efxLanguage.js', 'efxTheme.js', 'index.js', 'efxWords.js', 'generated/words.js'];
   for (const file of filesToCopy) {
-    const srcFile = path.join(srcDir, file);
     const distFile = path.join(distDir, file);
-    if (fs.existsSync(srcFile)) {
-      fs.mkdirSync(path.dirname(distFile), { recursive: true });
-      fs.copyFileSync(srcFile, distFile);
-    }
+    fs.mkdirSync(path.dirname(distFile), { recursive: true });
+    fs.copyFileSync(path.join(srcDir, file), distFile);
   }
   // Copy efxTheme.js for Lezer external propSource
   const themeSrc = path.join(srcDir, 'efxTheme.js');
