@@ -3,7 +3,7 @@
 Single record of the work described in `plan.md`: one row per item with its commit, its numbers and the decisions taken, in Yannis's words where he decided. Updated with every item.
 
 **Last updated:** 2026-11-02, by the implementing thread.
-**Current phase:** 0. **Next item:** the gate 0 record, then Yannis's pass.
+**Current phase:** 0. **Next item:** Yannis's gate 0 pass, then P1.1.
 
 Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYog1UT5iVMsq6aa (endorsed by the design thread; Yannis, 2026-11-02 01:02Z: "ok tell it it can start the work").
 
@@ -21,7 +21,7 @@ Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYo
 | P0.1 Branch, plan, progress, baseline | done 2026-11-02 | 9afa567 | Build green with 10 generator warnings; test green | `feature/efx2-grammar` from `main` (c77c153, 0.2.1). `plan.md` is the project's copy, unchanged (SHA-256 `d39a156a…`). Baseline below |
 | P0.2 Sync, pins, generated files | done 2026-11-02 | 84c812d | Words: 73 function names, 90 keywords, 14 asset types, 7 label types, 5 format options. 161 completion items. 56 corpus files (52 view templates, 4 rules files, 2,909,413 bytes), byte-identical to the SDK. The oracle lexes the corpus into 631,306 tokens with no lexer error. A second sync gives identical files. Build and test green. First Check run on the fork green on Node 22.14.0 (run 41374373061: sync 4 s, generated files match) | `npm run sync` (`scripts/sync.js` and seven classes under `scripts/sync/`), pins in `package.json` `config`, the four generated parts, the workflow `check.yml`. `antlr-ng` 1.0.10 and `antlr4ng` 3.0.16 added as exact dev dependencies (the design thread's remark: a minor update must not change the generated files). The 73 function names are the toolkit's 72 completion functions plus `string`, which the lexer reads as `text`. Notes below |
 | Gate 0 simplify pass | done 2026-11-02 | ccb321d | Generated files unchanged (sync at the recorded pins and at the short pins); sync 5.3 s to 3.7 s; build and test green | Four review angles (reuse, simplification, efficiency, altitude) over the hand-written code, with the design thread's three remarks. Details below |
-| Gate 0 code-review pass | done 2026-11-02 | (this commit) | 10 findings, 4 fixed, 6 not taken; `words.js` changes in one comment line only; build and test green | Details below |
+| Gate 0 code-review pass | done 2026-11-02 | 87f04a2 | 10 findings, 4 fixed, 6 not taken; `words.js` changes in one comment line only; build and test green | Details below |
 
 ## Decisions
 
@@ -72,6 +72,7 @@ Not taken: an `engines` field for the sync's Node 22.13 (it would bind the packa
 
 | Gate | Date | Numbers | Commit |
 |---|---|---|---|
+| 0. Set up | 2026-11-02 | Sync reproducible: at 87f04a2 two syncs in a row leave every generated file as committed, as the Check workflow verifies on each push. Test still green; build green with the baseline's 10 generator warnings. No grammar change: `grammar/efx.grammar` and the rest of `src/` as at c77c153, only `src/generated/` added. Design thread accepted P0.1, P0.2 and the simplify pass. Waiting for Yannis's pass | (this commit) |
 
 ## Baseline
 
