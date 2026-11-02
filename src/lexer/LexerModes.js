@@ -9,8 +9,12 @@
 //   the start of a template, which takes text but nothing that ends it;
 // - label blocks, the name after a prefix and format options are each found by tokens that no
 //   other mode takes;
+// - the name and end of a stage header are tokens that no other mode takes; the mode hides
+//   nothing, so the blanks before the end stay with it;
 // - the start of a line takes words that an expression also has, so DEFAULT comes before
-//   EXPRESSION, which is the rest.
+//   EXPRESSION, which is the rest. Where the parser has just read a `;`, a line end, a header or an
+//   include, the lexer is at the start of a line even when the parser could take more of a rule
+//   (LexerContext.js).
 
 import { ExternalTokenizer } from '@lezer/lr';
 import { ExpressionMode } from './ExpressionMode.js';
@@ -19,11 +23,12 @@ import { IdentifierMode } from './IdentifierMode.js';
 import { LabelMode } from './LabelMode.js';
 import { LexerInput } from './LexerInput.js';
 import { LineMode } from './LineMode.js';
+import { StageHeaderMode } from './StageHeaderMode.js';
 import { TemplateMode } from './TemplateMode.js';
 import { TemplateStartMode } from './TemplateStartMode.js';
 
 const MODES = [new TemplateMode(), new TemplateStartMode(), new LabelMode(), new IdentifierMode(), new FormatMode(),
-  new LineMode(), new ExpressionMode()];
+  new StageHeaderMode(), new LineMode(), new ExpressionMode()];
 
 export const lexerModes = new ExternalTokenizer((input, stack) => {
   const text = new LexerInput(input);

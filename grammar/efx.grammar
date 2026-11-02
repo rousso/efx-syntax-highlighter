@@ -5,14 +5,24 @@
 // repeat a token's name, the token stands for it: a built-in function's alternative (its token
 // names the call) and a rule named like a token (template, assetType, stringLiteral, ...).
 //
+// The three tops are the three start rules of Efx.g4: a template file, a rules file and a single
+// expression. Each file is read with the top of its kind.
+//
 // The lexer's modes are parse state. The tokens whose reading depends on the mode are read by
-// src/lexer/: it finds the mode from the tokens the parser can take, and reads the text as the lexer
-// reads it in that mode, including what the mode hides, the skip tokens `space` and `Comment`.
-// Label blocks skip nothing, as their mode.
+// src/lexer/: it finds the mode from the tokens the parser can take, and where those do not tell,
+// from the tokens it has just read (@context); then it reads the text as the lexer reads it in that
+// mode, including what the mode hides, the skip tokens `space` and `Comment`. Label blocks skip
+// nothing, as their mode.
 
 // The first top, the editor's default; its rules follow in the order of Efx.g4.
 @top TemplateFile {
   includeDirective* GlobalDeclaration* TemplateDeclaration* (TemplateLine* | includeDirective) OtherSections?
+}
+
+// A rules file, the second top (rulesFile in Efx.g4); its rules follow the declarations.
+@top RulesFile {
+  includeDirective* ApiEndpointDeclaration* (DynamicFunctionDeclaration | GlobalVariableDeclaration)*
+  (ValidationStage | includeDirective)+
 }
 
 // A single expression with its context, as the toolkit reads one (singleExpression in Efx.g4).
@@ -39,7 +49,7 @@ SelectorBlock { StartSelectorBlock Selection EndBlock }
 
 Selection { fieldContext | nodeContext | AttributeReference }
 
-AttributeReference { fieldContext Slash AtPrefix UnquotedIdentifier }
+AttributeReference { fieldContext AttributeSlash AtPrefix UnquotedIdentifier }
 
 FunctionInvocation { FunctionPrefix UnquotedIdentifier OpenParenthesis ArgumentList? CloseParenthesis }
 
@@ -82,7 +92,7 @@ expression[@isGroup=Expression] {
   ParenthesizedExpression { OpenParenthesis expression CloseParenthesis } |
   FilteredExpression { expression !postfix OpenBracket expression CloseBracket } |
   IndexedExpression { expression !postfix OpenBracket At expression CloseBracket } |
-  AttributeExpression { expression !postfix Slash AtPrefix UnquotedIdentifier } |
+  AttributeExpression { expression !postfix AttributeSlash AtPrefix UnquotedIdentifier } |
   FieldFromContextExpression { expression !postfix ColonColon LinkedFieldReference } |
   NodeFromContextExpression { expression !postfix ColonColon SimpleNodeReference } |
   // After a field, a colon can start a property of the field or of its value; the parser tries
@@ -235,9 +245,85 @@ ContextVariableInitializer {
   ContextType Colon VariablePrefix UnquotedIdentifier Assignment (fieldContext | nodeContext | Slash)
 }
 
-// The includes before the declarations and the one instead of the template lines read the same
-// (~include).
+// ---- Rules files ----
+
+// The includes before the declarations and those after them, instead of the template lines or among
+// the stages, read the same (~include).
 includeDirective { IncludeDirective IncludePath ~include }
+
+ApiEndpointDeclaration { Endpoint StringLiteral (At StringLiteral)? Semicolon }
+
+DynamicFunctionDeclaration {
+  Let Dynamic Colon FunctionPrefix UnquotedIdentifier OpenParenthesis ParameterList? CloseParenthesis Call Api
+  StringLiteral? OnErrorClause? Semicolon
+}
+
+OnErrorClause { Comma? On Error (Warn | Reject) StringLiteral? }
+
+GlobalVariableDeclaration { VariableDeclaration }
+
+ValidationStage { StageHeaderStart StageIdentifier StageHeaderEnd StageVariableDeclaration* RuleSet+ }
+
+StageVariableDeclaration { VariableDeclaration }
+
+RuleSet {
+  WithClause Rules Semicolon? |
+  WithClause ConditionalRules FallbackRule Semicolon?
+}
+
+WithClause { With ContextDeclarationBlock }
+
+// A run of conditional rules is read once, then the token after it tells whether it starts the rules
+// or is the conditional rules before a fallback. The run has no node, so the trees are as in Efx.g4.
+Rules {
+  conditionalRuleRun (SimpleRule (SimpleRule | ConditionalRule)*)? |
+  SimpleRule (SimpleRule | ConditionalRule)*
+}
+
+ConditionalRules { conditionalRuleRun }
+
+conditionalRuleRun { ConditionalRule+ }
+
+SimpleRule { (AssertClause | ReportClause) AsClause ForClause InClause ScopeClause? }
+
+ConditionalRule { WhenClause (AssertClause | ReportClause) AsClause ForClause InClause ScopeClause? }
+
+FallbackRule { (OtherwiseAssertClause | OtherwiseReportClause) AsClause ForClause InClause ScopeClause? }
+
+WhenClause { When expression }
+
+AssertClause { Assert expression }
+
+ReportClause { Report expression }
+
+AsClause { As Severity RuleId }
+
+Severity { Error | Warning | Info }
+
+RuleId { RuleIdentifier }
+
+ForClause { FOR (SimpleFieldReference | SimpleNodeReference) }
+
+OtherwiseAssertClause { OtherwiseAssert expression }
+
+OtherwiseReportClause { OtherwiseReport expression }
+
+InClause { IN noticeTypeList }
+
+ScopeClause { Scope (ScopeAnnotation Flag? | Flag ScopeAnnotation?) }
+
+ScopeAnnotation { Pre | Post }
+
+Flag { HashPrefix UnquotedIdentifier }
+
+noticeTypeList {
+  AnyNoticeTypes { Star | Any } |
+  ExplicitNoticeTypes { NoticeTypeRange (Comma NoticeTypeRange)* }
+}
+
+NoticeTypeRange { NoticeType (Minus NoticeType)? }
+
+NoticeType { IntegerLiteral | Identifier }
 
 // ---- Template files ----
 
@@ -339,8 +425,9 @@ FunctionDeclaration {
 // ---- Tokens ----
 
 // The tokens whose reading depends on the lexer's mode, read by src/lexer/LexerModes.js: the skip
-// tokens, template text, label words, the tokens that take whitespace with them, and the words the
-// lexer reserves (src/generated/words.js).
+// tokens, template text, label words, the tokens that take whitespace with them, the words and
+// phrases the lexer reserves (src/generated/words.js), the include directive, which is read only
+// at the start of a line, and the slash before an attribute's name.
 @external tokens lexerModes from "./lexer/LexerModes.js" {
   space, Comment, FreeText, AssetType, LabelType, OtherAssetId, Semicolon,
   FormatShort, FormatMedium, FormatLong, FormatNoUnit, FormatNoFormatting,
@@ -358,6 +445,8 @@ FunctionDeclaration {
   AddDuration, SubtractDuration, DistinctValuesFunction, CountDuplicatesFunction, GetDuplicatesFunction, UnionFunction,
   IntersectFunction, ExceptFunction, SequenceEqualFunction, SortFunction, ReverseFunction, SubsequenceFunction,
   IndexOfFunction, PreferredLanguageFunction, PreferredLanguageTextFunction, SplitFunction,
+  Endpoint, Call, Api, On, Warn, Reject, Error, Warning, Info, Assert, Report, OtherwiseAssert, OtherwiseReport,
+  As, FOR, IN, Any, Scope, IncludeDirective, AttributeSlash[@name=Slash],
   PublicationDate, JustificationCode, JustificationDescription, PrivacyCode, WasWithheld, IsWithheld, IsWithholdable,
   IsDisclosed, IsMasked, RawValue, PreferredLanguage, PreferredLanguageText
 }
@@ -369,7 +458,6 @@ FunctionDeclaration {
   comment { "//" ![\r\n\f]* }
 
   // DEFAULT mode.
-  IncludeDirective { "#include" $[ \t]+ }
   IncludePath { '"' !["\r\n]+ '"' $[ \t]* comment? eol* }
   MixedIndent { ($[\t]+ $[ ]+ | $[ ]+ $[\t]+) $[ \t]* }
   Tabs { $[\t]+ }
@@ -377,6 +465,11 @@ FunctionDeclaration {
   OutlineNumber { @digit+ }
   SummarySectionHeader { "---" "-"* $[ \t]* "SUMMARY" $[ \t]* "---" "-"* eol* }
   NavigationSectionHeader { "---" "-"* $[ \t]* "NAVIGATION" $[ \t]* "---" "-"* eol* }
+  StageHeaderStart { "---" "-"* $[ \t]* ("STAGE" | "stage") $[ \t]+ }
+
+  // STAGE_HEADER mode.
+  StageIdentifier { $[a-zA-Z0-9] ($[a-zA-Z0-9_\-]* $[a-zA-Z0-9_])? }
+  StageHeaderEnd { $[ \t]* "---" "-"* eol* }
 
   // TEMPLATE mode.
   NewLine { $[ \t]* "\\n" $[ \t]* }
@@ -409,6 +502,9 @@ FunctionDeclaration {
   BtId { ("BT" | "OPP" | "OPT" | "OPA") "-" @digit+ }
   FieldId { BtId ("(" (("BT" "-" @digit+) | $[a-z]) ")")? ("-" $[a-zA-Z_] $[a-zA-Z_0-9]*)+ }
   NodeId { "ND-" $[a-zA-Z0-9]+ }
+  RuleIdentifier { "R-" $[a-zA-Z0-9] $[a-zA-Z0-9] $[a-zA-Z0-9] "-" $[a-zA-Z0-9] $[a-zA-Z0-9] $[a-zA-Z0-9] }
+  Pre { "@PRE" }
+  Post { "@POST" }
   VariablePrefix { "$" }
   AtPrefix { "@" }
   HashPrefix { "#" }
@@ -441,13 +537,14 @@ FunctionDeclaration {
   @precedence { NewLine, StartHyperlinkBlock, Whitespace }
   @precedence { DateLiteral, TimeLiteral, DayTimeDurationLiteral, YearMonthDurationLiteral, NodeId, FieldId, BtId, Identifier, DecimalLiteral, IntegerLiteral }
   @precedence { Comparison, Assignment }
+  @precedence { StageHeaderStart, Minus }
   @precedence { Ellipsis, DotDot, Dot }
   @precedence { DecimalLiteral, Dot }
 }
 
 @skip { space | Comment }
 
-@context templateEnd from "./lexer/TemplateEnd.js"
+@context lexerContext from "./lexer/LexerContext.js"
 
 @detectDelim
 

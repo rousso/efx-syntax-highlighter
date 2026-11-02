@@ -10,6 +10,9 @@ import { ENTRIES } from './trees/entries.js';
 
 /** The text an entry reads, the top it is read from, and the part of the tree the entry pins. */
 function readingOf(entry) {
+  if (entry.rules !== undefined) {
+    return { text: entry.rules, top: 'RulesFile', shown: String };
+  }
   if (entry.template !== undefined) {
     return { text: entry.template, top: 'TemplateFile', shown: String };
   }

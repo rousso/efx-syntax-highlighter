@@ -147,6 +147,10 @@ export const lineTokens = new Map([
   ['otherwise', 'Otherwise'],
   ['when', 'When'],
   ['with', 'With'],
+  ['OTHERWISE DISPLAY', 'Otherwise'],
+  ['OTHERWISE display', 'Otherwise'],
+  ['otherwise DISPLAY', 'Otherwise'],
+  ['otherwise display', 'Otherwise'],
 ]);
 
 // The token the lexer makes of each word it reserves in template text.
@@ -158,6 +162,10 @@ export const templateTokens = new Map([
   ['otherwise', 'Otherwise'],
   ['value', 'ValueKeyword'],
   ['when', 'When'],
+  ['OTHERWISE DISPLAY', 'Otherwise'],
+  ['OTHERWISE display', 'Otherwise'],
+  ['otherwise DISPLAY', 'Otherwise'],
+  ['otherwise display', 'Otherwise'],
 ]);
 
 // The token the lexer makes of each word of the format options after the pipe of an expression block.
@@ -331,4 +339,16 @@ export const expressionTokens = new Map([
   ['year', 'YearFunction'],
   ['year-month-duration', 'YearMonthDurationFunction'],
   ['years', 'YearsFunction'],
+  ['OTHERWISE ASSERT', 'OtherwiseAssert'],
+  ['OTHERWISE DISPLAY', 'Otherwise'],
+  ['OTHERWISE REPORT', 'OtherwiseReport'],
+  ['OTHERWISE assert', 'OtherwiseAssert'],
+  ['OTHERWISE display', 'Otherwise'],
+  ['OTHERWISE report', 'OtherwiseReport'],
+  ['otherwise ASSERT', 'OtherwiseAssert'],
+  ['otherwise DISPLAY', 'Otherwise'],
+  ['otherwise REPORT', 'OtherwiseReport'],
+  ['otherwise assert', 'OtherwiseAssert'],
+  ['otherwise display', 'Otherwise'],
+  ['otherwise report', 'OtherwiseReport'],
 ]);

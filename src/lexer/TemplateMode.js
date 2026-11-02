@@ -6,6 +6,7 @@
 
 import * as terms from '../efx-parser.terms.js';
 import { templateTokens } from '../generated/words.js';
+import { TEMPLATE_END } from './LexerContext.js';
 import { LexerMode } from './LexerMode.js';
 import { ReservedWords } from './ReservedWords.js';
 
@@ -18,10 +19,10 @@ export class TemplateMode extends LexerMode {
   /**
    * Where the parser can take text and a token that ends a template, or the line end of an EFX-1
    * line, or has just closed a template, after which the lexer is still in TEMPLATE mode
-   * (TemplateEnd.js).
+   * (LexerContext.js).
    */
   isActive(stack) {
-    return stack.context || stack.canShift(terms.CRLF)
+    return stack.context === TEMPLATE_END || stack.canShift(terms.CRLF)
       || (stack.canShift(terms.FreeText) && TEMPLATE_ENDS.some((token) => stack.canShift(token)));
   }
 

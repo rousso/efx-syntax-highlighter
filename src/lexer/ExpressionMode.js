@@ -1,6 +1,7 @@
 // EXPRESSION mode, and every place the other modes do not claim. All whitespace, line ends and
 // comments are hidden (WS, ExpressionComment). A reserved word is its token wherever the parser can
 // take that token or a name, as the lexer reads it; any other word is the grammar's own Identifier.
+// A `/` before an `@`, with only hidden text between, is the lexer's AttributeSlash.
 
 import * as terms from '../efx-parser.terms.js';
 import { expressionTokens } from '../generated/words.js';
@@ -23,6 +24,10 @@ export class ExpressionMode extends LexerMode {
   }
 
   read(input, stack) {
+    if (input.isSlash(0) && input.isAt(1 + input.hiddenLength(1))) {
+      input.accept(terms.AttributeSlash, 1);
+      return;
+    }
     if (input.isSemicolon(0)) {
       input.accept(terms.Semicolon, 1);
       return;

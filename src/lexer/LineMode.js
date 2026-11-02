@@ -2,19 +2,21 @@
 // Spaces and MixedIndent) unless a comment or a line end follows them (EmptyOrCommentLine), or they
 // follow a `;`, after which the lexer skips one run of whitespace (SKIP_WHITESPACE): those blanks
 // are hidden, and so are comments and line ends. A word is one of the line words; DISPLAY takes the
-// whitespace after it, which must be there.
+// whitespace after it, which must be there. `#include` and the blanks after it are an
+// IncludeDirective, which only this mode reads.
 
 import * as terms from '../efx-parser.terms.js';
 import { lineTokens } from '../generated/words.js';
+import { LINE_START } from './LexerContext.js';
 import { LexerMode } from './LexerMode.js';
 import { ReservedWords } from './ReservedWords.js';
 
 export class LineMode extends LexerMode {
   static #words = new ReservedWords(lineTokens);
 
-  /** Where the parser can take a line's indentation. */
+  /** At the start of a line (LexerContext.js), or where the parser can take a line's indentation. */
   isActive(stack) {
-    return stack.canShift(terms.Tabs);
+    return stack.context === LINE_START || stack.canShift(terms.Tabs);
   }
 
   hide(input) {
@@ -29,6 +31,9 @@ export class LineMode extends LexerMode {
   }
 
   read(input) {
+    if (input.take(terms.IncludeDirective, input.includeDirectiveLength())) {
+      return;
+    }
     const word = LineMode.#words.wordAt(input, 0);
     if (word === undefined) {
       return;

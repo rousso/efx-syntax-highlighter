@@ -10,6 +10,10 @@ const KEYWORD_MODES = ['DEFAULT_MODE', 'SKIP_WHITESPACE', 'TEMPLATE', 'EXPRESSIO
 // The modes of the words that start a line or come between its parts.
 const LINE_MODES = ['DEFAULT_MODE', 'SKIP_WHITESPACE'];
 
+// The whitespace the lexer reads between the two words of a phrase it makes one token of, such as
+// OTHERWISE DISPLAY: (TAB | SPACE | EOL)+. A phrase is listed when every one of these gives its token.
+const PHRASE_GAPS = [' ', '\t', '\n', ' \r\n\t '];
+
 // The tokens a word becomes in those modes when the lexer does not reserve it.
 const PLAIN_WORDS = new Set(['Identifier', 'FreeText']);
 
@@ -73,8 +77,33 @@ export class LexerWords {
   }
 
   #tokensIn(mode) {
-    return new Map(this.#candidates.filter((word) => this.#isReserved(word, mode))
+    const tokens = new Map(this.#candidates.filter((word) => this.#isReserved(word, mode))
       .map((word) => [word, this.#reservedToken(word, mode)]));
+    return this.#withPhrases(tokens, [mode]);
+  }
+
+  /**
+   * A table of words with the phrases the lexer makes one token of in the given modes: a reserved
+   * word, whitespace and another word, listed as the two words with one blank between them.
+   */
+  #withPhrases(tokens, modes) {
+    const phrases = new Map();
+    for (const first of tokens.keys()) {
+      for (const second of this.#candidates) {
+        const token = modes.map((mode) => this.#phraseToken(first, second, mode))
+          .find((name) => name !== undefined);
+        if (token !== undefined) {
+          phrases.set(`${first} ${second}`, token);
+        }
+      }
+    }
+    return new Map([...tokens, ...phrases]);
+  }
+
+  /** The token the lexer makes of two words in a mode, the same whatever whitespace is between them. */
+  #phraseToken(first, second, mode) {
+    const [token, ...others] = PHRASE_GAPS.map((gap) => this.#reservedToken(`${first}${gap}${second}`, mode));
+    return others.every((other) => other === token) ? token : undefined;
   }
 
   /**
@@ -91,7 +120,7 @@ export class LexerWords {
         tokens.set(word, token);
       }
     }
-    return tokens;
+    return this.#withPhrases(tokens, LINE_MODES);
   }
 
   #lexedAs(mode, token) {

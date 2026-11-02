@@ -15,11 +15,11 @@ export class FileComparison {
   // For each matched token of the lexer, by its index, the index of the editor's token it matches.
   #matches = new Map();
 
-  constructor(file, text) {
+  constructor(file, text, top) {
     this.#file = file;
     this.#text = text;
     this.#oracle = OracleTokens.of(text);
-    this.#editor = EditorTokens.of(text);
+    this.#editor = EditorTokens.of(text, top);
     this.#compare();
   }
 

@@ -13,15 +13,18 @@ import { TokenNames } from './conformance/TokenNames.js';
 // templates and the rules files. The test fails when they change, in either direction, until that
 // commit updates them here.
 const PINNED = {
-  validation: { files: 0, tokens: 43842 },
+  validation: { files: 3, tokens: 116006 },
   'view-templates': { files: 52, tokens: 348107 },
 };
 
 const CORPUS = fileURLToPath(new URL('./corpus/', import.meta.url));
 
 const files = fs.readdirSync(CORPUS, { recursive: true }).filter((file) => file.endsWith('.efx')).sort();
-const comparisons = files.map((file) => new FileComparison(file, fs.readFileSync(path.join(CORPUS, file), 'utf8')));
 const folderOf = (file) => file.split(path.sep)[0];
+// The top rule of the editor's grammar that reads the files of each corpus folder.
+const TOPS = { validation: 'RulesFile', 'view-templates': 'TemplateFile' };
+const comparisons = files.map((file) =>
+  new FileComparison(file, fs.readFileSync(path.join(CORPUS, file), 'utf8'), TOPS[folderOf(file)]));
 
 /** The counts of a group of files, kept by kind of token. */
 function countsOf(group) {

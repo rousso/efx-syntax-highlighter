@@ -9,24 +9,28 @@ const BLANK = /^\s*$/;
 
 export class EditorTokens {
   #text;
+  // The top rule of the grammar the text is read with.
+  #top;
   #tokens = [];
   #end = 0;
 
-  constructor(text) {
+  constructor(text, top) {
     this.#text = text;
+    this.#top = top;
   }
 
   /**
-   * The tokens of a text, in order, each with its name, its text and its start: the leaves of the
-   * parse tree, without comments. Text between two leaves that is not blank has no node of its own
-   * and is a token with no name. A parse error is a token named ⚠ where the error starts.
+   * The tokens of a text read with a top, in order, each with its name, its text and its start: the
+   * leaves of the parse tree, without comments. Text between two leaves that is not blank has no
+   * node of its own and is a token with no name. A parse error is a token named ⚠ where the error
+   * starts.
    */
-  static of(text) {
-    return new EditorTokens(text).#read();
+  static of(text, top) {
+    return new EditorTokens(text, top).#read();
   }
 
   #read() {
-    const cursor = parser.parse(this.#text).cursor();
+    const cursor = parser.configure({ top: this.#top }).parse(this.#text).cursor();
     do {
       const isLeaf = !EditorTokens.#hasChildren(cursor);
       if (cursor.type.isError || (isLeaf && cursor.from < cursor.to)) {

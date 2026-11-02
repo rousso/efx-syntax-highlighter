@@ -10,7 +10,11 @@ const HYPHEN = 45;
 const DOT = 46;
 const SLASH = 47;
 const SEMICOLON = 59;
+const AT = 64;
 const BACKSLASH = 92;
+
+// The text that starts an IncludeDirective.
+const INCLUDE = '#include';
 
 // The characters FreeText cannot hold: ~[\r\n\f\t #$@&;\\]
 const NOT_FREE_TEXT = new Set(Array.from('\r\n\f\t #$@&;\\', (c) => c.charCodeAt(0)));
@@ -57,6 +61,14 @@ export class LexerInput {
     return this.#input.peek(offset) === SEMICOLON;
   }
 
+  isSlash(offset) {
+    return this.#input.peek(offset) === SLASH;
+  }
+
+  isAt(offset) {
+    return this.#input.peek(offset) === AT;
+  }
+
   isBackslash(offset) {
     return this.#input.peek(offset) === BACKSLASH;
   }
@@ -79,6 +91,12 @@ export class LexerInput {
   /** The number of blanks and line-end characters at an offset. */
   whitespace(offset) {
     return this.#count(offset, (o) => this.isBlank(o) || this.isLineEnd(o));
+  }
+
+  /** The length of the whitespace and comments at an offset, which EXPRESSION mode hides (WS, ExpressionComment). */
+  hiddenLength(offset) {
+    const length = this.whitespace(offset) || this.commentLength(offset);
+    return length === 0 ? 0 : length + this.hiddenLength(offset + length);
   }
 
   /** The length of the comment at an offset, up to the line end. */
@@ -115,6 +133,12 @@ export class LexerInput {
       length += 1 + part;
     }
     return length;
+  }
+
+  /** The length of the IncludeDirective at the position: '#include' (TAB | SPACE)+ */
+  includeDirectiveLength() {
+    const blanks = this.text(0, INCLUDE.length) === INCLUDE ? this.blanks(INCLUDE.length) : 0;
+    return blanks > 0 ? INCLUDE.length + blanks : 0;
   }
 
   /** The length of the FreeText at the position. */
