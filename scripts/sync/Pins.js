@@ -28,7 +28,8 @@ export class Pins {
 
   /** The same pins, each commit named by its full hash. */
   async resolved() {
-    return new Pins(await this.sdk.resolved(), await this.toolkit.resolved());
+    const [sdk, toolkit] = await Promise.all([this.sdk.resolved(), this.toolkit.resolved()]);
+    return new Pins(sdk, toolkit);
   }
 
   record() {

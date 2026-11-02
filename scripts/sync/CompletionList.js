@@ -23,7 +23,7 @@ export class CompletionList {
   }
 
   /** The text of src/generated/sdk2-completions.json. */
-  toJSON(source) {
+  toFile(source) {
     return JSON.stringify({ source, items: this.#items }, null, 2) + '\n';
   }
 
@@ -33,13 +33,12 @@ export class CompletionList {
       throw new Error(`Not a completion item: ${line}`);
     }
     const { kind, label, dataType, parameters } = match.groups;
-    if (kind !== 'FUNCTION') {
-      return { label, kind, dataType };
-    }
-    return {
-      label, kind, dataType,
-      parameters: parameters === '' ? [] : parameters.split(', ').map((parameter) => CompletionList.#parameterOf(parameter, line)),
-    };
+    const item = { label, kind, dataType };
+    return parameters === undefined ? item : { ...item, parameters: CompletionList.#parametersOf(parameters, line) };
+  }
+
+  static #parametersOf(text, line) {
+    return text === '' ? [] : text.split(', ').map((parameter) => CompletionList.#parameterOf(parameter, line));
   }
 
   static #parameterOf(text, line) {

@@ -11,7 +11,7 @@ export class Corpus {
   }
 
   static async of(sdk) {
-    const paths = (await Promise.all(FOLDERS.map((folder) => sdk.filesIn(folder))))
+    const paths = (await Promise.all(FOLDERS.map((folder) => sdk.filesUnder(folder))))
       .flat().filter((path) => path.endsWith('.efx'));
     return new Corpus(new Map(await Promise.all(paths.map(async (path) => [path, await sdk.read(path)]))));
   }

@@ -3,7 +3,7 @@
 Single record of the work described in `plan.md`: one row per item with its commit, its numbers and the decisions taken, in Yannis's words where he decided. Updated with every item.
 
 **Last updated:** 2026-11-02, by the implementing thread.
-**Current phase:** 0. **Next item:** gate 0: the simplify and code-review passes over the phase's commits, then the gate record.
+**Current phase:** 0. **Next item:** gate 0: the code-review pass over the phase's commits, then the gate record.
 
 Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYog1UT5iVMsq6aa (endorsed by the design thread; Yannis, 2026-11-02 01:02Z: "ok tell it it can start the work").
 
@@ -19,7 +19,8 @@ Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYo
 | Item | Status | Commit | Numbers | Notes |
 |---|---|---|---|---|
 | P0.1 Branch, plan, progress, baseline | done 2026-11-02 | 9afa567 | Build green with 10 generator warnings; test green | `feature/efx2-grammar` from `main` (c77c153, 0.2.1). `plan.md` is the project's copy, unchanged (SHA-256 `d39a156a…`). Baseline below |
-| P0.2 Sync, pins, generated files | done 2026-11-02 | (this commit) | Words: 73 function names, 90 keywords, 14 asset types, 7 label types, 5 format options. 161 completion items. 56 corpus files (52 view templates, 4 rules files, 2,909,413 bytes), byte-identical to the SDK. The oracle lexes the corpus into 631,306 tokens with no lexer error. A second sync gives identical files. Build and test green | `npm run sync` (`scripts/sync.js` and seven classes under `scripts/sync/`), pins in `package.json` `config`, the four generated parts, the workflow `check.yml`. `antlr-ng` 1.0.10 and `antlr4ng` 3.0.16 added as exact dev dependencies (the design thread's remark: a minor update must not change the generated files). The 73 function names are the toolkit's 72 completion functions plus `string`, which the lexer reads as `text`. Notes below |
+| P0.2 Sync, pins, generated files | done 2026-11-02 | 84c812d | Words: 73 function names, 90 keywords, 14 asset types, 7 label types, 5 format options. 161 completion items. 56 corpus files (52 view templates, 4 rules files, 2,909,413 bytes), byte-identical to the SDK. The oracle lexes the corpus into 631,306 tokens with no lexer error. A second sync gives identical files. Build and test green. First Check run on the fork green on Node 22.14.0 (run 41374373061: sync 4 s, generated files match) | `npm run sync` (`scripts/sync.js` and seven classes under `scripts/sync/`), pins in `package.json` `config`, the four generated parts, the workflow `check.yml`. `antlr-ng` 1.0.10 and `antlr4ng` 3.0.16 added as exact dev dependencies (the design thread's remark: a minor update must not change the generated files). The 73 function names are the toolkit's 72 completion functions plus `string`, which the lexer reads as `text`. Notes below |
+| Gate 0 simplify pass | done 2026-11-02 | (this commit) | Generated files unchanged (sync at the recorded pins and at the short pins); sync 5.3 s to 3.7 s; build and test green | Four review angles (reuse, simplification, efficiency, altitude) over the hand-written code, with the design thread's three remarks. Details below |
 
 ## Decisions
 
@@ -34,10 +35,26 @@ Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYo
 
 ## How the sync works (P0.2)
 
-- **Sources.** The forks are read from GitHub at full commit hashes: the API lists the two corpus folders and resolves a short hash; the files come from raw.githubusercontent.com. `GITHUB_TOKEN` is sent to the API only, when it is set; the workflow sets it.
+- **Sources.** The forks are read from GitHub at full commit hashes: the API resolves a short hash and lists the commit's files once (`git/trees`, recursive), so files in a subfolder of the corpus folders are not missed; the files come from raw.githubusercontent.com. `GITHUB_TOKEN` is sent to the API only, when it is set; the workflow sets it.
 - **Generated grammar.** antlr-ng's JavaScript target writes code for the `antlr4` runtime, not for `antlr4ng`. The sync generates TypeScript, which targets `antlr4ng`, and removes the types with Node's `module.stripTypeScriptTypes` (Node 22.13 or later). The stripped lexer is byte-identical on Node 22.14.0 (the workflow's) and 22.23.4. antlr-ng 1.0.10 cannot be imported as a library (its entry exports a type as a value), so the sync runs its command line. The parser is generated in a temporary folder under `node_modules/.cache/` and not kept.
-- **Words.** The candidates are the quoted words of `EfxLexer.g4`; each is lexed by the generated lexer in each mode, as the toolkit's `CatalogueCompletenessTest` does. Function names: the spellings of the tokens that can start `builtInFunction` (read from the parser's ATN). Keywords: every other word reserved in `DEFAULT_MODE`, `SKIP_WHITESPACE`, `TEMPLATE` or `EXPRESSION`, that is, lexed as a token other than `Identifier` or `FreeText`. Asset and label types: the words lexed as `AssetType` and `LabelType` in `LABEL`. Format options: the words lexed in `FORMAT`.
+- **Words.** The candidates are the quoted words of `EfxLexer.g4`; each is lexed by the generated lexer in each mode, as the toolkit's `CatalogueCompletenessTest` finds a word's token by lexing it. Function names: the spellings of the tokens that can start `builtInFunction` (read from the parser's ATN). Keywords: every other word reserved in `DEFAULT_MODE`, `SKIP_WHITESPACE`, `TEMPLATE` or `EXPRESSION`, that is, lexed as a token other than `Identifier` or `FreeText`. Asset and label types: the words lexed as `AssetType` and `LabelType` in `LABEL`. Format options: the words lexed in `FORMAT`.
 - **Proxy.** Node's `fetch` does not read `HTTPS_PROXY`; behind a proxy, run the sync with `NODE_USE_ENV_PROXY=1` (Node 22.21 or later), as was done here.
+
+## Gate 0 simplify pass
+
+Fixed:
+
+- The four downloads (two grammars, the completion list, the corpus) run at once, and the two pins resolve at once; a pin already written as a full hash needs no call. Sync 5.3 s to 3.7 s here.
+- The corpus lists the files under its folders at any depth, through one recursive listing of the commit (the design thread's remark 3), instead of the files directly in them; the same 56 files at the pin.
+- `LexerWords` computes each set once (it had computed the function names four times) and lists the five sets in one place, used by `words.js` and by the sync's report. It takes the candidates from `AntlrGrammar.quotedWords()`, so the words always come from the grammar that was generated.
+- `AntlrGrammar.oracleFiles(source)` gives `test/oracle/` as a map, as `Corpus.files()` gives `test/corpus/`; the oracle's header is no longer written in `sync.js`, and the lexer text is private.
+- Comments: the work folder is under the repository so that the generated modules resolve `antlr4ng`, and in `node_modules/.cache` because git ignores it (remark 1); `LexerWords` no longer says it reads words the same way as the toolkit's test, only that it finds a word's token by lexing it.
+- `CompletionList.toJSON` renamed `toFile`: JavaScript calls a method named `toJSON` from `JSON.stringify`. Its item is built in one place.
+- `check.yml` caches the npm download.
+
+Not taken: running antlr-ng without blocking (0.4 s, at the cost of a two-stage start); reading the pins through npm's `npm_package_config_*` (the sync would then need npm to run); the parser's ATN read through its `_ATN` static instead of a parser instance (an underscored member; the instance is the public way); `check.yml` on pushes to `main` only (the work branch has no pull request, and every commit is to be checked); `publish.yml` calling `check.yml` (publishing is phase 4).
+
+For P1.2's design (from the altitude angle; each would change `words.js`, so none is taken here): a word's token by lexer mode, as a table, would let the Lezer grammar name the ANTLR keyword tokens (`If`, `Then`, `Else`) without typing their words, and make the conformance mapping the identity for them; the sets could overlap, with a set of type words from `primitiveType` (`text`, `date`, `duration`, ...), instead of `keywords` leaving out the function names; the hand-kept mode and plain-token lists in `LexerWords` could come from the lexer.
 
 ## Gate results
 

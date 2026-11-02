@@ -5,6 +5,7 @@ const PIN = /^(?<repository>[\w.-]+\/[\w.-]+)@(?<commit>[0-9a-f]{7,40})$/;
 export class GitHubCommit {
   #repository;
   #commit;
+  #files;
 
   constructor(repository, commit) {
     this.#repository = repository;
@@ -22,14 +23,16 @@ export class GitHubCommit {
 
   /** The same commit named by its full hash, so that the pin cannot become ambiguous. */
   async resolved() {
+    if (this.#commit.length === 40) {
+      return this;
+    }
     const { sha } = await this.#api(`commits/${this.#commit}`);
     return new GitHubCommit(this.#repository, sha);
   }
 
-  /** The paths of the files directly inside a folder. */
-  async filesIn(folder) {
-    const entries = await this.#api(`contents/${folder}?ref=${this.#commit}`);
-    return entries.filter((entry) => entry.type === 'file').map((entry) => entry.path);
+  /** The paths of the files under a folder, at any depth. */
+  async filesUnder(folder) {
+    return (await this.#allFiles()).filter((file) => file.startsWith(`${folder}/`));
   }
 
   /** The bytes of a file, read without the API, which limits the number of calls. */
@@ -41,6 +44,17 @@ export class GitHubCommit {
 
   toString() {
     return `${this.#repository}@${this.#commit}`;
+  }
+
+  /** The paths of all the files of the commit, listed once. */
+  #allFiles() {
+    this.#files ??= this.#api(`git/trees/${this.#commit}?recursive=1`).then(({ tree, truncated }) => {
+      if (truncated) {
+        throw new Error(`GitHub truncated the file list of ${this}`);
+      }
+      return tree.filter((entry) => entry.type === 'blob').map((entry) => entry.path);
+    });
+    return this.#files;
   }
 
   /** A call to the GitHub API, with GITHUB_TOKEN when it is set, for its higher limit. */
