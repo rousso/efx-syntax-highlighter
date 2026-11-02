@@ -9,7 +9,7 @@ import { TokenNames } from './conformance/TokenNames.js';
 
 // The numbers as measured by the last commit that changed them. The test fails when they change,
 // in either direction, until that commit updates them here.
-const PINNED = { files: 0, tokens: 274723 };
+const PINNED = { files: 0, tokens: 288185 };
 
 const CORPUS = new URL('./corpus/', import.meta.url);
 

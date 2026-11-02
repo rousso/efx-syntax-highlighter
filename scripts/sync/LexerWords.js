@@ -10,6 +10,9 @@ const KEYWORD_MODES = ['DEFAULT_MODE', 'SKIP_WHITESPACE', 'TEMPLATE', 'EXPRESSIO
 // The tokens a word becomes in those modes when the lexer does not reserve it.
 const PLAIN_WORDS = new Set(['Identifier', 'FreeText']);
 
+// The parser rule whose first tokens are the names of the built-in functions.
+const FUNCTION_RULE = 'builtInFunction';
+
 export class LexerWords {
   #grammar;
   #candidates;
@@ -18,12 +21,15 @@ export class LexerWords {
   constructor(grammar) {
     this.#grammar = grammar;
     this.#candidates = grammar.quotedWords();
-    const functionNames = this.#functionNames();
+    const functionTokens = grammar.firstTokens(FUNCTION_RULE);
+    const readElsewhere = grammar.tokensReadBeyondStartOf(FUNCTION_RULE);
+    const functionOnlyTokens = new Set([...functionTokens].filter((token) => !readElsewhere.has(token)));
     this.#sets = [
-      { name: 'functionNames', words: functionNames,
+      { name: 'functionNames', words: this.#lexedAsOneOf('EXPRESSION', functionTokens),
         comment: 'Every spelling of a token that can start a built-in function call (builtInFunction in Efx.g4).' },
-      { name: 'keywords', words: this.#keywords(new Set(functionNames)),
-        comment: 'Every other word the lexer reads as a token of its own at the start of a line, in template text or in expressions.' },
+      { name: 'keywords', words: this.#keywords(functionOnlyTokens),
+        comment: 'Every word the lexer reads as a token of its own at the start of a line, in template text or in '
+          + 'expressions, except the words the parser reads only as the name of a built-in function.' },
       { name: 'assetTypes', words: this.#lexedAs('LABEL', 'AssetType'),
         comment: 'The words the lexer reads as AssetType in a label block.' },
       { name: 'labelTypes', words: this.#lexedAs('LABEL', 'LabelType'),
@@ -47,18 +53,17 @@ export class LexerWords {
     return this.#sets.map(({ name, words }) => `${words.length} ${name}`).join(', ');
   }
 
-  #functionNames() {
-    const functionTokens = this.#grammar.firstTokens('builtInFunction');
-    return this.#candidates.filter((word) => functionTokens.has(this.#grammar.tokenOf(word, 'EXPRESSION')));
-  }
-
-  #keywords(functionNames) {
-    return this.#candidates.filter((word) => !functionNames.has(word)
+  #keywords(functionOnlyTokens) {
+    return this.#candidates.filter((word) => !functionOnlyTokens.has(this.#grammar.tokenOf(word, 'EXPRESSION'))
       && KEYWORD_MODES.some((mode) => this.#isReserved(word, mode)));
   }
 
   #lexedAs(mode, token) {
-    return this.#candidates.filter((word) => this.#grammar.tokenOf(word, mode) === token);
+    return this.#lexedAsOneOf(mode, new Set([token]));
+  }
+
+  #lexedAsOneOf(mode, tokens) {
+    return this.#candidates.filter((word) => tokens.has(this.#grammar.tokenOf(word, mode)));
   }
 
   #lexedIn(mode) {

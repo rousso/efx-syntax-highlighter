@@ -102,73 +102,6 @@ item {
 
   Pipe { "|" }
   
-  // Keywords - All EFX keywords from the lexer
-  Keyword {    
-    // Logical operators
-    "and" | "AND" |
-    "or" | "OR" |
-    "not" | "NOT" |
-    
-    // Comparison/test keywords
-    "is" | "IS" |
-    "in" | "IN" |
-    "like" | "LIKE" |
-    "present" | "PRESENT" |
-    "empty" | "EMPTY" |
-    "unique" | "UNIQUE" |
-    
-    // Quantifiers
-    "every" | "EVERY" |
-    "some" | "SOME" |
-    "satisfies" | "SATISFIES" |
-    
-    // Conditional keywords
-    "if" | "IF" |
-    "then" | "THEN" |
-    "else" | "ELSE" |
-    
-    // Loop/iteration keywords
-    "for" | "FOR" |
-    "return" | "RETURN" |
-    
-   
-    // XPath-like axis keywords
-    "preceding" | "preceding-sibling" |
-    "following" | "following-sibling" |
-    "ancestor" | "ancestor-or-self" |
-    "descendant" | "descendant-or-self" |
-    "child" | "parent" | "self"
-    
-  }
-
-  BuiltInFunction {
-    "count" | "substring" | "string" |
-    "contains" | "starts-with" | "ends-with" |
-    "string-length" | "sum" | "format-number" |
-    "upper-case" | "lower-case" |
-    "concat" | "string-join" |
-    "day-time-duration" | "year-month-duration" |
-    "add-measure" | "subtract-measure" |
-    "distinct-values" | "value-union" |
-    "value-intersect" | "value-except" |
-    "sequence-equal" |
-    "preferred-language" | "preferred-language-text"
-  }
-
-  LabelKeyword {
-    // Asset types
-    "business-term" | "field" | "node" |
-    "group" | "view" | "notice" |
-    "codelist" | "code" |
-    "auxiliary" | "rule" | "expression" |
-    "interval" | "pattern" |
-    
-    // Label types
-    "name" | "when-true" | "when-false" |
-    "description" | "hint" | "template" | "text"
-  }
-  
-  
   // Literals
   Literal { StringLiteral | NumericLiteral | BooleanLiteral | DateLiteral | TimeLiteral | DurationLiteral }
   StringLiteral { '"' (!["\\] | "\\" _)* '"' | "'" (!['\\] | "\\" _)* "'" }
@@ -216,8 +149,12 @@ item {
   FreeText { ![\u0020\u0009\r\n#$@{};]+ }
   
   // DurationLiteral must come before Identifier in precedence
-  @precedence { Comment, LET, WITH, WHEN, OTHERWISE, DISPLAY, INVOKE, INDEX, BY, SharpValue, Type, BuiltInFunction, LabelKeyword, Keyword, Literal, BooleanLiteral. DurationLiteral, NodeId, FieldId, Variable, Identifier, Operator, Punctuation, LB, RB, LP, RP, Delimiter, Coma, Pipe, FreeText }
+  @precedence { Comment, LET, WITH, WHEN, OTHERWISE, DISPLAY, INVOKE, INDEX, BY, SharpValue, Type, Literal, BooleanLiteral. DurationLiteral, NodeId, FieldId, Variable, Identifier, Operator, Punctuation, LB, RB, LP, RP, Delimiter, Coma, Pipe, FreeText }
 }
+
+// Keywords, built-in function names and label words come from src/generated/words.js: the grammar
+// reads each as an Identifier, and wordToken in src/efxWords.js gives its kind where the parser can take it.
+@external specialize {Identifier} wordToken from "./efxWords.js" { Keyword, BuiltInFunction, LabelKeyword }
 
 @skip { space }
         

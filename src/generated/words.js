@@ -77,7 +77,7 @@ export const functionNames = new Set([
   'years',
 ]);
 
-// Every other word the lexer reads as a token of its own at the start of a line, in template text or in expressions.
+// Every word the lexer reads as a token of its own at the start of a line, in template text or in expressions, except the words the parser reads only as the name of a built-in function.
 export const keywords = new Set([
   'ALWAYS',
   'ANY',
@@ -122,12 +122,14 @@ export const keywords = new Set([
   'codelist',
   'compute',
   'context',
+  'date',
   'display',
   'distinct',
   'duplicates',
   'duration',
   'dynamic',
   'else',
+  'empty',
   'endpoint',
   'every',
   'for',
@@ -135,6 +137,7 @@ export const keywords = new Set([
   'if',
   'in',
   'index',
+  'indicator',
   'invoke',
   'is',
   'isDisclosed',
@@ -146,6 +149,8 @@ export const keywords = new Set([
   'let',
   'like',
   'no',
+  'not',
+  'number',
   'on',
   'or',
   'otherwise',
@@ -161,8 +166,11 @@ export const keywords = new Set([
   'satisfies',
   'select',
   'some',
+  'string',
   'template',
+  'text',
   'then',
+  'time',
   'unique',
   'value',
   'warn',
