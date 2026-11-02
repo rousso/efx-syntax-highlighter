@@ -23,7 +23,7 @@ export const efxHighlighting = styleTags({
     BuiltInFunction: t.function(t.keyword),
     "fragment/Identifier": t.function(t.name),
     "LabelKeyword": t.className,  
-    "ExpressionBlock/DOLLAR": t.variableName,
+    "FormattedExpressionBlock/DOLLAR": t.variableName,
     "LabelBlock/SHARP": t.variableName,
     "LabelBlock/Identifier": t.special(t.name),
     "LabelBlock/Keyword": t.special(t.name),

@@ -4,7 +4,7 @@
 //   npm run sync                       reads the commits pinned in package.json again
 //   npm run sync -- <sdk> <toolkit>    pins new commits first, each as owner/repository@commit
 //
-// From the SDK: src/generated/words.js, test/oracle/ (the ANTLR lexer) and test/corpus/ (the view
+// From the SDK: src/generated/words.js, test/oracle/ (the ANTLR lexer and parser) and test/corpus/ (the view
 // templates and rules files). From the toolkit: src/generated/sdk2-completions.json.
 
 import { AntlrGrammar } from './sync/AntlrGrammar.js';
