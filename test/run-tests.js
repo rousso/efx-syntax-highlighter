@@ -11,8 +11,8 @@ try {
   if (!tree || tree.length === 0) {
     console.error('Parse failed: tree is empty');
     process.exit(1);
-  } else if (rootName !== "templateFile") {
-    console.error(`Parse failed: unexpected root node '${rootName}' (expected 'templateFile')`);
+  } else if (rootName !== "TemplateFile") {
+    console.error(`Parse failed: unexpected root node '${rootName}' (expected 'TemplateFile')`);
     process.exit(1);
   } else {
     console.log('Parse successful. Root node:', rootName);

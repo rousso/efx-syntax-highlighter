@@ -1,5 +1,5 @@
-// The oracle's side of the tree test: the tree the EFX-2 parser makes of a single expression, with
-// its nodes named as the editor's grammar names them:
+// The oracle's side of the tree test: the tree the EFX-2 parser makes of a text read from one of its
+// tops, singleExpression or templateFile, with its nodes named as the editor's grammar names them:
 //
 // - a rule is its context's name: the rule's name, or the label of its alternative when the
 //   alternatives are labelled, with a capital first letter;
@@ -29,8 +29,8 @@ class ErrorCount extends BaseErrorListener {
 }
 
 export class OracleTree {
-  /** The tree of a text read as a single expression, and the number of syntax errors in it. */
-  static of(text) {
+  /** The tree of a text read from a top, named as the editor names it, and the number of syntax errors in it. */
+  static of(text, top) {
     const errors = new ErrorCount();
     const lexer = new EfxLexer(CharStream.fromString(text));
     const parser = new EfxParser(new CommonTokenStream(lexer));
@@ -38,7 +38,8 @@ export class OracleTree {
       recognizer.removeErrorListeners();
       recognizer.addErrorListener(errors);
     }
-    const [tree] = OracleTree.#treesOf(parser.singleExpression());
+    const rule = top[0].toLowerCase() + top.slice(1);
+    const [tree] = OracleTree.#treesOf(parser[rule]());
     return { tree, errors: errors.count };
   }
 

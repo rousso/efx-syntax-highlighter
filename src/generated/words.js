@@ -131,13 +131,42 @@ export const labelTypes = new Set([
   'when-true',
 ]);
 
-// The words of the format options after the pipe of an expression block.
-export const formatOptions = new Set([
-  'long',
-  'medium',
-  'no-formatting',
-  'no-unit',
-  'short',
+// The token the lexer makes of each word it reserves at the start of a line or between its parts.
+export const lineTokens = new Map([
+  ['DISPLAY', 'Display'],
+  ['ENDPOINT', 'Endpoint'],
+  ['INVOKE', 'Invoke'],
+  ['LET', 'Let'],
+  ['OTHERWISE', 'Otherwise'],
+  ['WHEN', 'When'],
+  ['WITH', 'With'],
+  ['display', 'Display'],
+  ['endpoint', 'Endpoint'],
+  ['invoke', 'Invoke'],
+  ['let', 'Let'],
+  ['otherwise', 'Otherwise'],
+  ['when', 'When'],
+  ['with', 'With'],
+]);
+
+// The token the lexer makes of each word it reserves in template text.
+export const templateTokens = new Map([
+  ['INVOKE', 'Invoke'],
+  ['OTHERWISE', 'Otherwise'],
+  ['WHEN', 'When'],
+  ['invoke', 'Invoke'],
+  ['otherwise', 'Otherwise'],
+  ['value', 'ValueKeyword'],
+  ['when', 'When'],
+]);
+
+// The token the lexer makes of each word of the format options after the pipe of an expression block.
+export const formatTokens = new Map([
+  ['long', 'FormatLong'],
+  ['medium', 'FormatMedium'],
+  ['no-formatting', 'FormatNoFormatting'],
+  ['no-unit', 'FormatNoUnit'],
+  ['short', 'FormatShort'],
 ]);
 
 // The token the lexer makes of each word it reserves in an expression.

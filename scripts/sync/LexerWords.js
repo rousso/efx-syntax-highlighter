@@ -7,6 +7,9 @@
 // of a line, the whitespace after a keyword, template text and expressions.
 const KEYWORD_MODES = ['DEFAULT_MODE', 'SKIP_WHITESPACE', 'TEMPLATE', 'EXPRESSION'];
 
+// The modes of the words that start a line or come between its parts.
+const LINE_MODES = ['DEFAULT_MODE', 'SKIP_WHITESPACE'];
+
 // The tokens a word becomes in those modes when the lexer does not reserve it.
 const PLAIN_WORDS = new Set(['Identifier', 'FreeText']);
 
@@ -31,10 +34,14 @@ export class LexerWords {
         comment: 'The words the lexer reads as AssetType in a label block.' },
       { name: 'labelTypes', words: this.#lexedAs('LABEL', 'LabelType'),
         comment: 'The words the lexer reads as LabelType in a label block.' },
-      { name: 'formatOptions', words: this.#lexedIn('FORMAT'),
-        comment: 'The words of the format options after the pipe of an expression block.' },
     ];
     this.#tables = [
+      { name: 'lineTokens', tokens: this.#lineTokens(),
+        comment: 'The token the lexer makes of each word it reserves at the start of a line or between its parts.' },
+      { name: 'templateTokens', tokens: this.#tokensIn('TEMPLATE'),
+        comment: 'The token the lexer makes of each word it reserves in template text.' },
+      { name: 'formatTokens', tokens: this.#tokensIn('FORMAT'),
+        comment: 'The token the lexer makes of each word of the format options after the pipe of an expression block.' },
       { name: 'expressionTokens', tokens: this.#tokensIn('EXPRESSION'),
         comment: 'The token the lexer makes of each word it reserves in an expression.' },
     ];
@@ -67,7 +74,24 @@ export class LexerWords {
 
   #tokensIn(mode) {
     return new Map(this.#candidates.filter((word) => this.#isReserved(word, mode))
-      .map((word) => [word, this.#grammar.tokenOf(word, mode)]));
+      .map((word) => [word, this.#reservedToken(word, mode)]));
+  }
+
+  /**
+   * The token of each word the lexer reserves at the start of a line or between its parts. A word is
+   * also read with a blank after it, since the lexer reads DISPLAY at the start of a line as one
+   * token with the whitespace that follows it.
+   */
+  #lineTokens() {
+    const tokens = new Map();
+    for (const word of this.#candidates) {
+      const token = LINE_MODES.flatMap((mode) => [word, `${word} `].map((text) => this.#reservedToken(text, mode)))
+        .find((name) => name !== undefined);
+      if (token !== undefined) {
+        tokens.set(word, token);
+      }
+    }
+    return tokens;
   }
 
   #lexedAs(mode, token) {
@@ -78,12 +102,13 @@ export class LexerWords {
     return this.#candidates.filter((word) => tokens.has(this.#grammar.tokenOf(word, mode)));
   }
 
-  #lexedIn(mode) {
-    return this.#candidates.filter((word) => this.#grammar.tokenOf(word, mode) !== undefined);
+  #isReserved(word, mode) {
+    return this.#reservedToken(word, mode) !== undefined;
   }
 
-  #isReserved(word, mode) {
-    const token = this.#grammar.tokenOf(word, mode);
-    return token !== undefined && !PLAIN_WORDS.has(token);
+  /** The token the lexer makes of a text in a mode, when it is one token and not a plain word. */
+  #reservedToken(text, mode) {
+    const token = this.#grammar.tokenOf(text, mode);
+    return PLAIN_WORDS.has(token) ? undefined : token;
   }
 }
