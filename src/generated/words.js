@@ -77,7 +77,7 @@ export const functionNames = new Set([
   'years',
 ]);
 
-// Every other word the lexer reserves at the start of a line, in template text and in expressions.
+// Every other word the lexer reads as a token of its own at the start of a line, in template text or in expressions.
 export const keywords = new Set([
   'ALWAYS',
   'ANY',

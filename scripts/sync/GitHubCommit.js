@@ -1,4 +1,6 @@
-// A GitHub repository at one commit: the source the sync reads its files from.
+// A GitHub repository at one commit: the source the sync reads its files from. The API resolves
+// the commit and lists its files; the bytes come from raw.githubusercontent.com, which does not
+// count against the API's hourly limit (60 calls without a token).
 
 const PIN = /^(?<repository>[\w.-]+\/[\w.-]+)@(?<commit>[0-9a-f]{7,40})$/;
 
@@ -37,8 +39,9 @@ export class GitHubCommit {
 
   /** The bytes of a file, read without the API, which limits the number of calls. */
   async read(path) {
+    const encoded = path.split('/').map(encodeURIComponent).join('/');
     const response = await GitHubCommit.#fetch(
-      `https://raw.githubusercontent.com/${this.#repository}/${this.#commit}/${path}`, {});
+      `https://raw.githubusercontent.com/${this.#repository}/${this.#commit}/${encoded}`, {});
     return Buffer.from(await response.arrayBuffer());
   }
 

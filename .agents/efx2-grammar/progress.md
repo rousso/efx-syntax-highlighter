@@ -3,7 +3,7 @@
 Single record of the work described in `plan.md`: one row per item with its commit, its numbers and the decisions taken, in Yannis's words where he decided. Updated with every item.
 
 **Last updated:** 2026-11-02, by the implementing thread.
-**Current phase:** 0. **Next item:** gate 0: the code-review pass over the phase's commits, then the gate record.
+**Current phase:** 0. **Next item:** the gate 0 record, then Yannis's pass.
 
 Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYog1UT5iVMsq6aa (endorsed by the design thread; Yannis, 2026-11-02 01:02Z: "ok tell it it can start the work").
 
@@ -20,7 +20,8 @@ Design docs, agreed before coding: phase 0, https://claude.ai/artifact/1WfNkkUYo
 |---|---|---|---|---|
 | P0.1 Branch, plan, progress, baseline | done 2026-11-02 | 9afa567 | Build green with 10 generator warnings; test green | `feature/efx2-grammar` from `main` (c77c153, 0.2.1). `plan.md` is the project's copy, unchanged (SHA-256 `d39a156a…`). Baseline below |
 | P0.2 Sync, pins, generated files | done 2026-11-02 | 84c812d | Words: 73 function names, 90 keywords, 14 asset types, 7 label types, 5 format options. 161 completion items. 56 corpus files (52 view templates, 4 rules files, 2,909,413 bytes), byte-identical to the SDK. The oracle lexes the corpus into 631,306 tokens with no lexer error. A second sync gives identical files. Build and test green. First Check run on the fork green on Node 22.14.0 (run 41374373061: sync 4 s, generated files match) | `npm run sync` (`scripts/sync.js` and seven classes under `scripts/sync/`), pins in `package.json` `config`, the four generated parts, the workflow `check.yml`. `antlr-ng` 1.0.10 and `antlr4ng` 3.0.16 added as exact dev dependencies (the design thread's remark: a minor update must not change the generated files). The 73 function names are the toolkit's 72 completion functions plus `string`, which the lexer reads as `text`. Notes below |
-| Gate 0 simplify pass | done 2026-11-02 | (this commit) | Generated files unchanged (sync at the recorded pins and at the short pins); sync 5.3 s to 3.7 s; build and test green | Four review angles (reuse, simplification, efficiency, altitude) over the hand-written code, with the design thread's three remarks. Details below |
+| Gate 0 simplify pass | done 2026-11-02 | ccb321d | Generated files unchanged (sync at the recorded pins and at the short pins); sync 5.3 s to 3.7 s; build and test green | Four review angles (reuse, simplification, efficiency, altitude) over the hand-written code, with the design thread's three remarks. Details below |
+| Gate 0 code-review pass | done 2026-11-02 | (this commit) | 10 findings, 4 fixed, 6 not taken; `words.js` changes in one comment line only; build and test green | Details below |
 
 ## Decisions
 
@@ -55,6 +56,17 @@ Fixed:
 Not taken: running antlr-ng without blocking (0.4 s, at the cost of a two-stage start); reading the pins through npm's `npm_package_config_*` (the sync would then need npm to run); the parser's ATN read through its `_ATN` static instead of a parser instance (an underscored member; the instance is the public way); `check.yml` on pushes to `main` only (the work branch has no pull request, and every commit is to be checked); `publish.yml` calling `check.yml` (publishing is phase 4).
 
 For P1.2's design (from the altitude angle; each would change `words.js`, so none is taken here): a word's token by lexer mode, as a table, would let the Lezer grammar name the ANTLR keyword tokens (`If`, `Then`, `Else`) without typing their words, and make the conformance mapping the identity for them; the sets could overlap, with a set of type words from `primitiveType` (`text`, `date`, `duration`, ...), instead of `keywords` leaving out the function names; the hand-kept mode and plain-token lists in `LexerWords` could come from the lexer.
+
+## Gate 0 code-review pass
+
+Fixed:
+
+- A lexer mode or parser rule the grammar does not have (a renamed `LABEL` mode, a renamed `builtInFunction`) now stops the sync with "The grammar has no lexer mode named ..." instead of writing empty sets or failing deep inside antlr4ng.
+- The raw file URL encodes each path segment, so a path with `#`, `?` or `%` cannot be cut short.
+- The `keywords` comment in `words.js` says what the rule does: words the lexer reads as a token of its own. `STAGE`, `SUMMARY`, `NAVIGATION` and `#include` are not there, being parts of longer tokens (`---- STAGE 1a ----`), which P2 ports as tokens.
+- `GitHubCommit` says why it uses two routes: the API for the commit and its file list, the raw host for the bytes, which does not count against the API's limit (the design thread's suggestion).
+
+Not taken: an `engines` field for the sync's Node 22.13 (it would bind the package's users, whom the sync does not concern; the requirement is above); a retry or a limit on the 56 parallel downloads (none failed here or in CI; to be added if CI shows one); `replaceFolder` emptying `test/oracle/` and `test/corpus/` (the sync owns both: P1.1's test goes elsewhere in `test/`); `not` and the other function names left out of `keywords` (the P1.2 design note above); `check.yml` running twice on a pull request branch (as in the simplify pass); one shared repository root for the three files that find theirs from `import.meta.url` (each is local to its concern).
 
 ## Gate results
 

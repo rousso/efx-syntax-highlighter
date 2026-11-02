@@ -23,7 +23,7 @@ export class LexerWords {
       { name: 'functionNames', words: functionNames,
         comment: 'Every spelling of a token that can start a built-in function call (builtInFunction in Efx.g4).' },
       { name: 'keywords', words: this.#keywords(new Set(functionNames)),
-        comment: 'Every other word the lexer reserves at the start of a line, in template text and in expressions.' },
+        comment: 'Every other word the lexer reads as a token of its own at the start of a line, in template text or in expressions.' },
       { name: 'assetTypes', words: this.#lexedAs('LABEL', 'AssetType'),
         comment: 'The words the lexer reads as AssetType in a label block.' },
       { name: 'labelTypes', words: this.#lexedAs('LABEL', 'LabelType'),
