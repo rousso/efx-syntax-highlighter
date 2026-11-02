@@ -21,11 +21,9 @@ export class LexerWords {
   constructor(grammar) {
     this.#grammar = grammar;
     this.#candidates = grammar.quotedWords();
-    const functionTokens = grammar.firstTokens(FUNCTION_RULE);
-    const readElsewhere = grammar.tokensReadBeyondStartOf(FUNCTION_RULE);
-    const functionOnlyTokens = new Set([...functionTokens].filter((token) => !readElsewhere.has(token)));
+    const functionOnlyTokens = grammar.tokensReadOnlyAtStartOf(FUNCTION_RULE);
     this.#sets = [
-      { name: 'functionNames', words: this.#lexedAsOneOf('EXPRESSION', functionTokens),
+      { name: 'functionNames', words: this.#lexedAsOneOf('EXPRESSION', grammar.firstTokens(FUNCTION_RULE)),
         comment: 'Every spelling of a token that can start a built-in function call (builtInFunction in Efx.g4).' },
       { name: 'keywords', words: this.#keywords(functionOnlyTokens),
         comment: 'Every word the lexer reads as a token of its own at the start of a line, in template text or in '

@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CharStream, CommonTokenStream } from 'antlr4ng';
+import { CharStream, CommonTokenStream, Token } from 'antlr4ng';
 
 const ANTLR_NG = fileURLToPath(new URL('../../node_modules/antlr-ng/dist/cli/runner.js', import.meta.url));
 
@@ -75,23 +75,23 @@ export class AntlrGrammar {
   /** The names of the tokens that can start the given parser rule. */
   firstTokens(ruleName) {
     const parser = this.#parser();
-    const first = parser.atn.nextTokens(AntlrGrammar.#startOf(parser, ruleName));
-    return new Set(first.toArray().map((type) => parser.vocabulary.getSymbolicName(type)));
+    return AntlrGrammar.#namesOf(parser, AntlrGrammar.#firstTypes(parser, ruleName));
   }
 
-  /** The names of the tokens the parser reads anywhere except as the first token of the given rule. */
-  tokensReadBeyondStartOf(ruleName) {
+  /**
+   * The names of the tokens the parser reads only as the first token of the given rule: the tokens
+   * that can start it and that no other transition of the parser reads. Each transition says which
+   * tokens it reads, so a wildcard or a negated set is read as what it matches.
+   */
+  tokensReadOnlyAtStartOf(ruleName) {
     const parser = this.#parser();
+    const { atn } = parser;
     const opening = AntlrGrammar.#openingTransitions(AntlrGrammar.#startOf(parser, ruleName));
-    const names = new Set();
-    for (const state of parser.atn.states) {
-      for (const transition of state.transitions) {
-        if (!transition.isEpsilon && !opening.has(transition)) {
-          transition.label.toArray().forEach((type) => names.add(parser.vocabulary.getSymbolicName(type)));
-        }
-      }
-    }
-    return names;
+    const others = atn.states.flatMap((state) => state.transitions)
+      .filter((transition) => !transition.isEpsilon && !opening.has(transition));
+    const types = AntlrGrammar.#firstTypes(parser, ruleName).filter((type) =>
+      !others.some((transition) => transition.matches(type, Token.MIN_USER_TOKEN_TYPE, atn.maxTokenType)));
+    return AntlrGrammar.#namesOf(parser, types);
   }
 
   /** The files of test/oracle/: the lexer grammar as pinned, and the lexer generated from it. */
@@ -109,6 +109,14 @@ export class AntlrGrammar {
 
   static #startOf(parser, ruleName) {
     return parser.atn.ruleToStartState[AntlrGrammar.#indexOf(parser.ruleNames, ruleName, 'parser rule')];
+  }
+
+  static #firstTypes(parser, ruleName) {
+    return parser.atn.nextTokens(AntlrGrammar.#startOf(parser, ruleName)).toArray();
+  }
+
+  static #namesOf(parser, types) {
+    return new Set(types.map((type) => parser.vocabulary.getSymbolicName(type)));
   }
 
   /**

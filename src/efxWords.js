@@ -1,6 +1,7 @@
 // The kind of each word for the grammar. The grammar reads every word as an Identifier, and asks
 // wordToken, its external specializer for Identifier, whether the word is a label word, a keyword
 // or a built-in function where it stands. The words come from the lexer, through the sync.
+// The module runs from dist/, where the build puts it beside the parser and efx-parser.terms.js.
 
 import { BuiltInFunction, Keyword, LabelKeyword } from './efx-parser.terms.js';
 import { assetTypes, functionNames, keywords, labelTypes } from './generated/words.js';

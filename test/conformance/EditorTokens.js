@@ -28,29 +28,28 @@ export class EditorTokens {
   #read() {
     const cursor = parser.parse(this.#text).cursor();
     do {
-      if (cursor.type.isError) {
-        this.#error(cursor.name, cursor.from, cursor.to);
-      } else if (cursor.from < cursor.to && !EditorTokens.#hasChildren(cursor)) {
-        this.#leaf(cursor.name, cursor.from, cursor.to);
+      const isLeaf = !EditorTokens.#hasChildren(cursor);
+      if (cursor.type.isError || (isLeaf && cursor.from < cursor.to)) {
+        this.#token(cursor.name, cursor.from, cursor.to);
+        // The text of a leaf is read; a parse error that holds leaves is read through them.
+        if (isLeaf) {
+          this.#end = cursor.to;
+        }
       }
     } while (cursor.next());
     this.#textUntil(this.#text.length);
     return this.#tokens;
   }
 
-  /** A leaf of the tree: a token, or a comment, which is left out. */
-  #leaf(name, from, to) {
+  /**
+   * A token where a node starts: a leaf of the tree, or a parse error, which comes before the leaves
+   * it may hold. Comments are left out.
+   */
+  #token(name, from, to) {
     this.#textUntil(from);
     if (!COMMENTS.has(name)) {
       this.#tokens.push({ name, text: this.#text.slice(from, to), start: from });
     }
-    this.#end = to;
-  }
-
-  /** A parse error: a token where it starts, before the leaves it may hold. */
-  #error(name, from, to) {
-    this.#textUntil(from);
-    this.#tokens.push({ name, text: this.#text.slice(from, to), start: from });
   }
 
   /** The text since the previous leaf, up to a position, as a token with no name unless it is blank. */
