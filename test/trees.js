@@ -62,7 +62,7 @@ const mistakes = ENTRIES.filter((entry) => entry.mistake !== undefined).length;
 console.log(`Trees: ${ENTRIES.length - failures.length} of ${ENTRIES.length} entries as pinned `
   + `(${divergences} of them listed divergences, ${mistakes} mistakes).`);
 for (const { entry, problems } of failures) {
-  console.error(`\n${JSON.stringify(entry.input ?? entry.text ?? entry.template)}\n  pinned: ${entry.tree}`);
+  console.error(`\n${JSON.stringify(entry.input ?? entry.text ?? entry.template ?? entry.rules)}\n  pinned: ${entry.tree}`);
   problems.forEach((problem) => console.error(`  ${problem}`));
 }
 if (failures.length > 0) {
