@@ -16,4 +16,9 @@ export class LexerMode {
 
   /** Reads the token the mode reads at the position, if it reads one there. */
   read(input, stack) {}
+
+  /** The words the mode reads as tokens of the grammar, each with its token: [word, token] pairs. */
+  words() {
+    return [];
+  }
 }

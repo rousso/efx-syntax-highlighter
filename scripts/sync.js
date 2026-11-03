@@ -5,7 +5,7 @@
 //   npm run sync -- <sdk> <toolkit>    pins new commits first, each as owner/repository@commit
 //
 // From the SDK: src/generated/words.js, test/oracle/ (the ANTLR lexer and parser) and test/corpus/ (the view
-// templates and rules files). From the toolkit: src/generated/sdk2-completions.json.
+// templates and rules files). From the toolkit: src/generated/completions.js.
 
 import { AntlrGrammar } from './sync/AntlrGrammar.js';
 import { CompletionList } from './sync/CompletionList.js';
@@ -30,7 +30,7 @@ const completions = CompletionList.parse(completionList.toString('utf8'));
 
 const output = new GeneratedFiles();
 output.write('src/generated/words.js', words.toModule(sdk));
-output.write('src/generated/sdk2-completions.json', completions.toFile(`${toolkit}:${COMPLETIONS}`));
+output.write('src/generated/completions.js', completions.toModule(`${COMPLETIONS} at ${toolkit}`));
 output.replaceFolder('test/oracle', grammar.oracleFiles(sdk));
 output.replaceFolder('test/corpus', corpus.files());
 pins.record();

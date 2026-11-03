@@ -24,4 +24,8 @@ export class FormatMode extends LexerMode {
       input.accept(word.token, word.length);
     }
   }
+
+  words() {
+    return FormatMode.#words.entries();
+  }
 }

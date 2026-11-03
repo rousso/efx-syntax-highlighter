@@ -15,6 +15,9 @@
 //   EXPRESSION, which is the rest. Where the parser has just read a `;`, a line end, a header or an
 //   include, the lexer is at the start of a line even when the parser could take more of a rule
 //   (LexerContext.js).
+//
+// The completion source asks the same questions where the cursor is: the mode there, and the words
+// it reads (src/completion/ExpectedTokens.js).
 
 import { ExternalTokenizer } from '@lezer/lr';
 import { ExpressionMode } from './ExpressionMode.js';
@@ -30,10 +33,18 @@ import { TemplateStartMode } from './TemplateStartMode.js';
 const MODES = [new TemplateMode(), new TemplateStartMode(), new LabelMode(), new IdentifierMode(), new FormatMode(),
   new StageHeaderMode(), new LineMode(), new ExpressionMode()];
 
-export const lexerModes = new ExternalTokenizer((input, stack) => {
+/** The mode the lexer is in where the parser stands. */
+export function lexerModeAt(stack) {
+  return MODES.find((mode) => mode.isActive(stack));
+}
+
+/** Reads the text at the input's position as the lexer reads it in the mode it is in there. */
+export function readToken(input, stack) {
   const text = new LexerInput(input);
-  const mode = MODES.find((candidate) => candidate.isActive(stack));
+  const mode = lexerModeAt(stack);
   if (!mode.hide(text)) {
     mode.read(text, stack);
   }
-}, { contextual: true });
+}
+
+export const lexerModes = new ExternalTokenizer(readToken, { contextual: true });

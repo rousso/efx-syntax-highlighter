@@ -64,6 +64,10 @@ export class TemplateMode extends LexerMode {
     // the error ANTLR reports.
   }
 
+  words() {
+    return TemplateMode.#words.entries();
+  }
+
   /** LineJoining: '\\' (TAB | SPACE)* EOL+ (TAB | SPACE)*, or 0 when no line end follows. */
   static #lineJoiningLength(input) {
     const beforeEnd = 1 + input.blanks(1);

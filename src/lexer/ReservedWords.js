@@ -23,6 +23,13 @@ export class ReservedWords {
     }
   }
 
+  /** Each word and phrase whose token has a term, with that term: [text, token] pairs. */
+  entries() {
+    const phrases = [...this.#phrases].flatMap(([first, seconds]) =>
+      seconds.map(({ second, token }) => [`${first} ${second}`, token]));
+    return [...this.#words, ...phrases].filter(([, token]) => token !== undefined);
+  }
+
   /**
    * The token of the reserved word that is the whole Identifier-shaped word at an offset, or of the
    * phrase it starts there, and its length; undefined when that word is not reserved or its token

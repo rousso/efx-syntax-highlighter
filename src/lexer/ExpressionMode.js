@@ -37,4 +37,8 @@ export class ExpressionMode extends LexerMode {
       input.accept(word.token, word.length);
     }
   }
+
+  words() {
+    return ExpressionMode.#words.entries();
+  }
 }

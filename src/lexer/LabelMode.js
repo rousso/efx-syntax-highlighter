@@ -20,4 +20,8 @@ export class LabelMode extends LexerMode {
     const token = assetTypes.has(word) ? terms.AssetType : labelTypes.has(word) ? terms.LabelType : terms.OtherAssetId;
     input.take(token, length);
   }
+
+  words() {
+    return [...[...assetTypes].map((word) => [word, terms.AssetType]), ...[...labelTypes].map((word) => [word, terms.LabelType])];
+  }
 }

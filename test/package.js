@@ -1,7 +1,8 @@
 // The package test: the package's entry point (dist/index.js), as an application loads it. It checks
 // what the entry point offers; that efx(kind) reads each kind of EFX text from its own top, with no
-// error; that the EFX colours are the editor's default colours and give way to an application's own;
-// and that an unknown kind is refused. It reads the build in dist/, so it runs after `npm run build`.
+// error, and offers its completions; that the EFX colours are the editor's default colours and give
+// way to an application's own; and that an unknown kind is refused. It reads the build in dist/, so
+// it runs after `npm run build`. What the completions offer is checked by completions.js.
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -35,13 +36,17 @@ function errorsIn(tree) {
 }
 
 const CHECKS = {
-  'the entry point offers efx, efxHighlightStyle and efxTheme': () => {
-    assert.deepEqual(Object.keys(entryPoint).sort(), ['efx', 'efxHighlightStyle', 'efxTheme']);
+  'the entry point offers efx, efxSymbols, efxHighlightStyle and efxTheme': () => {
+    assert.deepEqual(Object.keys(entryPoint).sort(), ['efx', 'efxHighlightStyle', 'efxSymbols', 'efxTheme']);
   },
   ...Object.fromEntries(KINDS.map(({ kind, top, text }) => [`efx('${kind}') reads its text from ${top}`, () => {
     const tree = treeOf(EditorState.create({ doc: text, extensions: [efx(kind)] }));
     assert.equal(tree.type.name, top);
     assert.equal(errorsIn(tree), 0);
+  }])),
+  ...Object.fromEntries(KINDS.map(({ kind }) => [`efx('${kind}') offers its completions`, () => {
+    const state = EditorState.create({ extensions: [efx(kind)] });
+    assert.equal(state.languageDataAt('autocomplete', 0).length, 1);
   }])),
   'the EFX colours are the default': () => {
     const state = EditorState.create({ extensions: [efx('template')] });

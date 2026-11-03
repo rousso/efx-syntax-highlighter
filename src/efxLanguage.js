@@ -1,7 +1,10 @@
 // CodeMirror 6 language support for EFX. The grammar reads three kinds of EFX text, each from a top
 // of its own; an editor holds one kind, so there is one language per kind. The parser carries the
-// highlight tags (efxHighlighting.js); the EFX colours are the editor's default colours.
+// highlight tags (efxHighlighting.js); the EFX colours are the editor's default colours. The
+// language offers its completions (completion/EfxCompletions.js) to the editor's autocompletion,
+// which the application turns on.
 import { LRLanguage, LanguageSupport, syntaxHighlighting } from "@codemirror/language";
+import { EfxCompletions } from "./completion/EfxCompletions.js";
 import { parser } from "./efx-parser.js";
 import { efxHighlightStyle } from "./efxTheme.js";
 
@@ -20,5 +23,7 @@ export function efx(kind) {
   if (language === undefined) {
     throw new RangeError(`Unknown kind of EFX text: ${kind}. The kinds are ${[...LANGUAGES.keys()].join(", ")}.`);
   }
-  return new LanguageSupport(language, [DEFAULT_COLOURS]);
+  const completions = new EfxCompletions(language.parser);
+  const autocomplete = language.data.of({ autocomplete: (context) => completions.complete(context) });
+  return new LanguageSupport(language, [DEFAULT_COLOURS, autocomplete]);
 }

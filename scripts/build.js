@@ -17,15 +17,19 @@ try {
 
   // Copy all relevant JS files from src to dist (except parser)
   // The parser loads efxHighlighting.js and the lexer/ folder, which loads generated/words.js, from
-  // dist/. A file missing from src/ fails the build.
-  const filesToCopy = ['efxLanguage.js', 'efxHighlighting.js', 'efxTheme.js', 'index.js', 'generated/words.js'];
+  // dist/; the language loads the completion/ folder, which loads generated/completions.js. A file
+  // missing from src/ fails the build.
+  const filesToCopy = ['efxLanguage.js', 'efxHighlighting.js', 'efxSymbols.js', 'efxTheme.js', 'index.js',
+    'generated/words.js', 'generated/completions.js'];
   for (const file of filesToCopy) {
     const distFile = path.join(distDir, file);
     fs.mkdirSync(path.dirname(distFile), { recursive: true });
     fs.copyFileSync(path.join(srcDir, file), distFile);
   }
-  fs.rmSync(path.join(distDir, 'lexer'), { recursive: true, force: true });
-  fs.cpSync(path.join(srcDir, 'lexer'), path.join(distDir, 'lexer'), { recursive: true });
+  for (const folder of ['lexer', 'completion']) {
+    fs.rmSync(path.join(distDir, folder), { recursive: true, force: true });
+    fs.cpSync(path.join(srcDir, folder), path.join(distDir, folder), { recursive: true });
+  }
   console.log('Copied source files to dist/.');
 } catch (err) {
   console.error('Build failed:', err);

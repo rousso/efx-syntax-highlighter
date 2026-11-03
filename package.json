@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node test/package.js && node test/trees.js && node test/conformance.js && node test/styles.js",
+    "test": "node test/package.js && node test/trees.js && node test/conformance.js && node test/styles.js && node test/completions.js",
     "sync": "node scripts/sync.js"
   },
   "keywords": [
@@ -43,6 +43,7 @@
     "provenance": true
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/language": "^6.6.0",
     "@codemirror/state": "^6.2.0",
     "@codemirror/view": "^6.8.0",

@@ -47,4 +47,8 @@ export class LineMode extends LexerMode {
       input.accept(word.token, word.length + whitespace);
     }
   }
+
+  words() {
+    return LineMode.#words.entries();
+  }
 }
