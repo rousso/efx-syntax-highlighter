@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EFX editor demo</title>
+  <!-- The page loads the modules from the repository as `npm run demo` serves it: the build in dist/
+       and CodeMirror from node_modules/, with no bundler. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "@codemirror/autocomplete": "/node_modules/@codemirror/autocomplete/dist/index.js",
+        "@codemirror/language": "/node_modules/@codemirror/language/dist/index.js",
+        "@codemirror/state": "/node_modules/@codemirror/state/dist/index.js",
+        "@codemirror/view": "/node_modules/@codemirror/view/dist/index.js",
+        "@lezer/common": "/node_modules/@lezer/common/dist/index.js",
+        "@lezer/highlight": "/node_modules/@lezer/highlight/dist/index.js",
+        "@lezer/lr": "/node_modules/@lezer/lr/dist/index.js",
+        "@marijn/find-cluster-break": "/node_modules/@marijn/find-cluster-break/src/index.js",
+        "crelt": "/node_modules/crelt/index.js",
+        "style-mod": "/node_modules/style-mod/src/style-mod.js",
+        "w3c-keyname": "/node_modules/w3c-keyname/index.js"
+      }
+    }
+  </script>
+  <style>
+    body { margin: 0 auto; max-width: 72rem; padding: 1rem; font: 15px/1.5 system-ui, sans-serif; color: #222; background: #fff; }
+    h1 { font-size: 1.4rem; margin: 0 0 0.5rem; }
+    p { margin: 0 0 0.75rem; }
+    kbd { border: 1px solid #bbb; border-radius: 3px; padding: 0 0.3em; font-size: 0.9em; }
+    #editor .cm-editor { height: 75vh; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>EFX editor</h1>
+  <p>
+    The editor holds one kind of EFX text, in the EFX colours. While you type, it offers the words the
+    grammar takes at the cursor, the functions as calls; <kbd>Ctrl</kbd>+<kbd>Space</kbd> asks for them
+    anywhere, template text too. The field and node ids it offers are those the text uses. It is a
+    plain CodeMirror editor, with no undo history and no key bindings beyond the completion's: the
+    package depends on no more of CodeMirror.
+  </p>
+  <p>
+    <label>Text:
+      <select id="kind">
+        <option value="template">Template file: test/sample.efx</option>
+        <option value="rules">Rules file: test/corpus/validation/stage-4m.efx</option>
+        <option value="expression">Single expression</option>
+      </select>
+    </label>
+  </p>
+  <div id="editor"></div>
+  <script type="module" src="demo.js"></script>
+</body>
+</html>
