@@ -1,12 +1,24 @@
-// CodeMirror 6 language support for efx
-import { LRLanguage, LanguageSupport } from "@codemirror/language";
-import { parser } from "../dist/efx-parser";
-import { efxHighlighting } from "./efxTheme";
+// CodeMirror 6 language support for EFX. The grammar reads three kinds of EFX text, each from a top
+// of its own; an editor holds one kind, so there is one language per kind. The parser carries the
+// highlight tags (efxHighlighting.js); the EFX colours are the editor's default colours.
+import { LRLanguage, LanguageSupport, syntaxHighlighting } from "@codemirror/language";
+import { parser } from "./efx-parser.js";
+import { efxHighlightStyle } from "./efxTheme.js";
 
-export const efxLanguage = LRLanguage.define({
-  parser
-});
+// The top of the grammar that reads each kind of EFX text.
+const TOPS = { template: "TemplateFile", rules: "RulesFile", expression: "SingleExpression" };
 
-export function efx() {
-  return new LanguageSupport(efxLanguage, [efxHighlighting]);
+const LANGUAGES = new Map(Object.entries(TOPS).map(([kind, top]) =>
+  [kind, LRLanguage.define({ name: "efx", parser: parser.configure({ top }) })]));
+
+// The EFX colours, used where the application gives the editor no colours of its own.
+const DEFAULT_COLOURS = syntaxHighlighting(efxHighlightStyle, { fallback: true });
+
+/** EFX support for an editor that holds one kind of EFX text: "template", "rules" or "expression". */
+export function efx(kind) {
+  const language = LANGUAGES.get(kind);
+  if (language === undefined) {
+    throw new RangeError(`Unknown kind of EFX text: ${kind}. The kinds are ${[...LANGUAGES.keys()].join(", ")}.`);
+  }
+  return new LanguageSupport(language, [DEFAULT_COLOURS]);
 }

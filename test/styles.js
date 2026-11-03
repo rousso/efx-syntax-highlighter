@@ -1,14 +1,14 @@
 // The style test: the highlight tags the editor gives the sample and a rules file of the corpus are
 // pinned as lists of runs (StyleDump), in test/styles/. It also checks that every node the style
-// table of src/efxTheme.js names is a node of the grammar: a name that is not one styles nothing,
-// silently. `node test/styles.js --write` writes the pinned lists anew, so that the commit that
-// changes the highlighting shows each change. It reads the build in dist/, so it runs after
+// table of src/efxHighlighting.js names is a node of the grammar: a name that is not one styles
+// nothing, silently. `node test/styles.js --write` writes the pinned lists anew, so that the commit
+// that changes the highlighting shows each change. It reads the build in dist/, so it runs after
 // `npm run build`.
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parser } from '../dist/efx-parser.js';
-import { EFX_STYLES } from '../dist/efxTheme.js';
+import { EFX_STYLES } from '../dist/efxHighlighting.js';
 import { StyleDump } from './styles/StyleDump.js';
 
 const PINNED = [

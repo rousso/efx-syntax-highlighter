@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node test/run-tests.js && node test/trees.js && node test/conformance.js && node test/styles.js",
+    "test": "node test/package.js && node test/trees.js && node test/conformance.js && node test/styles.js",
     "sync": "node scripts/sync.js"
   },
   "keywords": [

@@ -548,4 +548,4 @@ FunctionDeclaration {
 
 @detectDelim
 
-@external propSource efxHighlighting from "./efxTheme.js"
+@external propSource efxHighlighting from "./efxHighlighting.js"
