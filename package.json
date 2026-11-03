@@ -1,16 +1,14 @@
 {
   "name": "@op-ted/efx-syntax-highlighter",
-  "version": "0.2.1",
-  "description": "Lezer-based parser and CodeMirror 6 language support for EFX syntax highlighting.",
+  "version": "0.3.0",
+  "description": "Lezer-based parser and CodeMirror 6 language support for EFX: syntax highlighting and completions.",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js"
   },
   "files": [
     "dist",
-    "!dist/**/*.map",
-    "!dist/demo.js",
-    "!dist/highlight.js"
+    "!dist/**/*.map"
   ],
   "scripts": {
     "build": "node scripts/build.js",
