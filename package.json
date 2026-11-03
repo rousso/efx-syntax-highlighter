@@ -1,20 +1,20 @@
 {
   "name": "@op-ted/efx-syntax-highlighter",
-  "version": "0.2.1",
-  "description": "Lezer-based parser and CodeMirror 6 language support for EFX syntax highlighting.",
+  "version": "0.3.0",
+  "description": "Lezer-based parser and CodeMirror 6 language support for EFX: syntax highlighting and completions.",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js"
   },
   "files": [
     "dist",
-    "!dist/**/*.map",
-    "!dist/demo.js",
-    "!dist/highlight.js"
+    "!dist/**/*.map"
   ],
   "scripts": {
     "build": "node scripts/build.js",
-    "test": "node test/run-tests.js"
+    "test": "node test/package.js && node test/trees.js && node test/conformance.js && node test/styles.js && node test/completions.js",
+    "sync": "node scripts/sync.js",
+    "demo": "node scripts/demo.js"
   },
   "keywords": [
     "efx",
@@ -42,12 +42,21 @@
     "provenance": true
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/language": "^6.6.0",
     "@codemirror/state": "^6.2.0",
     "@codemirror/view": "^6.8.0",
-    "@lezer/common": "^1.0.0"
+    "@lezer/common": "^1.0.0",
+    "@lezer/highlight": "^1.2.1",
+    "@lezer/lr": "^1.4.12"
   },
   "devDependencies": {
-    "@lezer/generator": "^1.3.0"
+    "@lezer/generator": "^1.3.0",
+    "antlr-ng": "1.0.10",
+    "antlr4ng": "3.0.16"
+  },
+  "config": {
+    "sdk": "rousso/eForms-SDK@efc9a2116e752e2eed79b8a7391749bd69da060b",
+    "toolkit": "rousso/efx-toolkit-java@8675b8af21416f259fc7fa1a93b86f282b2abaa5"
   }
 }

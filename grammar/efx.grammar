@@ -1,226 +1,551 @@
-@top templateFile { (commentLine | declarationLine | legacyTemplateLine | templateLine)*  }
+// The editor's grammar: Efx.g4 and EfxLexer.g4 of EFX-2, rule for rule and in their order.
+//
+// A rule is a node named as in Efx.g4 with a capital first letter. A rule whose alternatives are
+// labelled is not a node: its alternatives are, as in ANTLR's parse tree. Where a node would only
+// repeat a token's name, the token stands for it: a built-in function's alternative (its token
+// names the call) and a rule named like a token (template, assetType, stringLiteral, ...).
+//
+// The three tops are the three start rules of Efx.g4: a template file, a rules file and a single
+// expression. Each file is read with the top of its kind.
+//
+// The lexer's modes are parse state. The tokens whose reading depends on the mode are read by
+// src/lexer/: it finds the mode from the tokens the parser can take, and where those do not tell,
+// from the tokens it has just read (@context); then it reads the text as the lexer reads it in that
+// mode, including what the mode hides, the skip tokens `space` and `Comment`. Label blocks skip
+// nothing, as their mode.
 
-declarationLine { varDecl | indexDecl | FuncDecl }
-
-varDecl {
-  LET localVarDecl ";" Comment? EOL
+// The first top, the editor's default; its rules follow in the order of Efx.g4.
+@top TemplateFile {
+  includeDirective* GlobalDeclaration* TemplateDeclaration* (TemplateLine* | includeDirective) OtherSections?
 }
 
-indexDecl {
-  LET Type Variable (INDEX expression)? (BY expression)? ";" Comment? EOL  
+// A rules file, the second top (rulesFile in Efx.g4); its rules follow the declarations.
+@top RulesFile {
+  includeDirective* ApiEndpointDeclaration* (DynamicFunctionDeclaration | GlobalVariableDeclaration)*
+  (ValidationStage | includeDirective)+
 }
 
-FuncDecl {
-  LET Type Variable Parenthesis parameters Parenthesis Operator expression ";" Comment? EOL
+// A single expression with its context, as the toolkit reads one (singleExpression in Efx.g4).
+@top SingleExpression {
+  StartExpressionBlock (FieldId | NodeId | Identifier) (Comma ParameterList)? EndBlock ExpressionBlock |
+  With (FieldId | NodeId | Identifier) (Comma ParameterList)? Compute expression |
+  StartExpressionBlock (FieldId | NodeId | Identifier) (Comma ParameterList)? EndBlock SelectorBlock |
+  With (FieldId | NodeId | Identifier) (Comma ParameterList)? Select Selection
 }
 
-legacyTemplateLine {
-  NumericLiteral? LB ContextBlock RB Fragment+ Comment? EOL
+// ---- Expressions ----
+
+ExpressionBlock {
+  StandardExpressionBlock
+  | ShorthandFieldValueReferenceFromContextField
 }
 
-ContextBlock {
-  localVarDecl (Coma localVarDecl)*
+StandardExpressionBlock {
+  Let expression Semicolon
+  | StartExpressionBlock expression EndBlock
 }
 
-localVarDecl {
-  (Type Variable Operator)? expression
+SelectorBlock { StartSelectorBlock Selection EndBlock }
+
+Selection { fieldContext | nodeContext | AttributeReference }
+
+AttributeReference { fieldContext AttributeSlash AtPrefix UnquotedIdentifier }
+
+FunctionInvocation { FunctionPrefix UnquotedIdentifier OpenParenthesis ArgumentList? CloseParenthesis }
+
+DynamicFunctionInvocation { FunctionInvocation }
+
+ParameterList { ParameterDeclaration (Comma ParameterDeclaration)* }
+
+ArgumentList { Argument (Comma Argument)* }
+
+Argument { expression }
+
+ParameterDeclaration { TypeDeclaration Colon VariablePrefix UnquotedIdentifier }
+
+TypeDeclaration { PrimitiveType Star? }
+
+PrimitiveType { Text | Indicator | Number | Date | Time | Duration }
+
+// The order of the alternatives of expression in Efx.g4, highest first; then, in templates, a
+// field's block before a computed one (fieldBlock) and a text block that takes all the text next
+// to it (text).
+@precedence {
+  postfix @left,
+  times @left,
+  plus @left,
+  compare @left,
+  inList @left,
+  uniqueIn @left,
+  empty @left,
+  distinct @left,
+  like @left,
+  present @left,
+  and @left,
+  or @left,
+  prefix @right,
+  fieldBlock,
+  text
 }
 
-templateLine {
-  NumericLiteral? (WITH ContextBlock)? (WHEN expression)? (DISPLAY Fragment+)? (OTHERWISE Fragment+)? (INVOKE item)? ";" Comment? EOL
+expression[@isGroup=Expression] {
+  ParenthesizedExpression { OpenParenthesis expression CloseParenthesis } |
+  FilteredExpression { expression !postfix OpenBracket expression CloseBracket } |
+  IndexedExpression { expression !postfix OpenBracket At expression CloseBracket } |
+  AttributeExpression { expression !postfix AttributeSlash AtPrefix UnquotedIdentifier } |
+  FieldFromContextExpression { expression !postfix ColonColon LinkedFieldReference } |
+  NodeFromContextExpression { expression !postfix ColonColon SimpleNodeReference } |
+  // After a field, a colon can start a property of the field or of its value; the parser tries
+  // both (~linkColon, ~fieldColon) and keeps the one the next word fits.
+  RawValueExpression { expression !postfix ~linkColon Colon RawValue } |
+  PreferredLanguageExpression { expression !postfix ~linkColon Colon PreferredLanguage } |
+  PreferredLanguageTextExpression { expression !postfix ~linkColon Colon PreferredLanguageText } |
+  // Divergence until P2.3 (plan): deciding at the slash, `2 * 3 / 4` groups as `2 * (3 / 4)`.
+  MultiplicativeExpression { expression !times (Star | Slash | Percent) expression } |
+  AdditiveExpression { expression !plus (Plus | Minus) expression } |
+  ComparisonExpression { expression !compare Comparison expression } |
+  InListCondition { expression !inList Not? In expression } |
+  UniqueValueCondition { expression !uniqueIn Is Not? Unique In expression } |
+  EmptinessCondition { expression !empty Is Not? Empty } |
+  DistinctCondition { expression !distinct Has No? Duplicates } |
+  LikePatternCondition { expression !like Not? Like StringLiteral } |
+  PresenceCondition { expression !present Is Not? Present } |
+  LogicalAndCondition { expression !and And expression } |
+  LogicalOrCondition { expression !or Or expression } |
+  ConditionalExpression { If expression Then expression Else !prefix expression } |
+  QuantifiedExpression { (Every | Some) IteratorList Satisfies !prefix expression } |
+  SequenceFromIteration { For IteratorList Return Distinct? !prefix expression } |
+  List { OpenBracket expression (Comma expression)* CloseBracket } |
+  LiteralExpression { Literal } |
+  ReferenceExpression { Reference } |
+  FieldPropertyExpression { fieldProperty } |
+  CodelistExpression { CodelistReference } |
+  FunctionExpression { BuiltInFunction }
 }
 
+IteratorList { iteratorExpression (Comma iteratorExpression)* }
 
-Fragment {
-  (TextBlock | ExpressionBlock | LabelBlock | HyperlinkBlock ) 
+iteratorExpression {
+  ValueIterator { PrimitiveType Colon VariablePrefix UnquotedIdentifier In expression } |
+  ContextIterator { ContextType Colon VariablePrefix UnquotedIdentifier In (fieldContext | nodeContext) }
 }
 
-ExpressionBlock { DOLLAR LB expression RB }
+Literal { stringLiteral | NumericLiteral | BooleanLiteral | dateLiteral | timeLiteral | DurationLiteral }
 
-HyperlinkBlock { AT LB expression RB }
+stringLiteral { StringLiteral | UuidV4Literal }
+NumericLiteral { Minus? (IntegerLiteral | DecimalLiteral) }
+BooleanLiteral { TrueBooleanLiteral | FalseBooleanLiteral }
+TrueBooleanLiteral { Always | True }
+FalseBooleanLiteral { Never | False }
+dateLiteral { DateLiteral }
+timeLiteral { TimeLiteral }
+DurationLiteral { DayTimeDurationLiteral | YearMonthDurationLiteral }
 
-LabelBlock {
-  SHARP LB (LabelKeyword Pipe)? (LabelKeyword Pipe)? AssetId* RB
+Reference { FieldReference | NodeReference | VariableReference | FunctionInvocation }
+
+FieldReference { AbsoluteFieldReference | LinkedFieldReference }
+AbsoluteFieldReference { Slash LinkedFieldReference }
+LinkedFieldReference { SimpleFieldReference ~linkColon (Colon LinkedFieldProperty)? }
+SimpleFieldReference { (FieldId | Identifier) ~fieldColon }
+FieldMention { (FieldId | Identifier) ~fieldColon (Colon LinkedFieldProperty)? }
+LinkedFieldProperty { PublicationDate | JustificationCode | JustificationDescription }
+
+NodeReference { AbsoluteNodeReference | SimpleNodeReference }
+AbsoluteNodeReference { Slash SimpleNodeReference }
+SimpleNodeReference { NodeId }
+
+VariableReference { VariablePrefix UnquotedIdentifier }
+
+fieldContext { FieldContext { (AbsoluteFieldReference | LinkedFieldReference) ContextBracket* } }
+nodeContext { NodeContext { (AbsoluteNodeReference | SimpleNodeReference) ContextBracket* } }
+ContextBracket { OpenBracket (Predicate | At expression) CloseBracket }
+Predicate { expression }
+
+fieldProperty {
+  FieldWasWithheldProperty { FieldMention Colon WasWithheld } |
+  FieldIsWithheldProperty { FieldMention Colon IsWithheld } |
+  FieldIsWithholdableProperty { FieldMention Colon IsWithholdable } |
+  FieldIsDisclosedProperty { FieldMention Colon IsDisclosed } |
+  FieldIsMaskedProperty { FieldMention Colon IsMasked } |
+  FieldPrivacyCodeProperty { FieldMention Colon PrivacyCode }
 }
 
-AssetId { FieldId | Identifier | LabelKeyword | Keyword | "-" }
-
-TextBlock { FreeText | Operator | Identifier | LabelKeyword | Keyword | DollarValue | SharpValue }
-
-commentLine { Comment EOL }
-
-parameters { parameter (Coma parameter)* }
-
-parameter {
-  Type? (Variable | Identifier | (FieldId | NodeId) predicate? | literal)
+CodelistReference {
+  OpenBracket Ellipsis UnquotedIdentifier CloseBracket
+  | HashPrefix UnquotedIdentifier
 }
 
-expression { 
-  (item | Parenthesis item+ Parenthesis)*
+BuiltInFunction {
+  booleanFunction | numericFunction | stringFunction | dateFunction | timeFunction | durationFunction | sequenceFunction
 }
 
+// A built-in function call: its token, then its arguments in parentheses.
+call<name, args> { name OpenParenthesis args CloseParenthesis }
+one { expression }
+two { expression Comma expression }
+three { expression Comma expression Comma expression }
 
-literal { StringLiteral | NumericLiteral | BooleanLiteral | DurationLiteral }
-
-functionCall {
-  (BuiltInFunction | Variable) Parenthesis parameters? Parenthesis
+booleanFunction {
+  call<Not, one> | call<ContainsFunction, two> | call<StartsWithFunction, two> | call<EndsWithFunction, two> |
+  call<SequenceEqualFunction, two> | call<Indicator, one> | call<Empty, one>
 }
 
-predicate { Bracket expression Bracket }
-
-item {
-  functionCall
-  | FieldId | NodeId
-  |  Keyword |
-  Operator 
-  | Literal
-  | SharpValue 
+numericFunction {
+  call<CountFunction, one> | call<CountDuplicatesFunction, one> | call<Number, one> | call<SumFunction, one> |
+  call<MinFunction, one> | call<MaxFunction, one> | call<AverageFunction, one> | call<StringLengthFunction, one> |
+  call<IndexOfFunction, two> | call<IndexOfSubstringFunction, two> | call<AbsoluteFunction, one> |
+  call<RoundFunction, one> | call<RoundDownFunction, one> | call<RoundUpFunction, one> |
+  call<YearFunction, one> | call<MonthFunction, one> | call<DayFunction, one> | call<HoursFunction, one> |
+  call<MinutesFunction, one> | call<SecondsFunction, one> | call<YearsFunction, one> | call<MonthsFunction, one> |
+  call<DaysFunction, one>
 }
 
+stringFunction {
+  call<SubstringFunction, two (Comma expression)?> | call<SubstringBeforeFunction, two> | call<SubstringAfterFunction, two> |
+  call<Text, one> | call<ConcatFunction, expression (Comma expression)*> | call<StringJoinFunction, two> |
+  call<FormatNumberFunction, two> | call<FormatShortFunction, expression (Comma expression)?> |
+  call<FormatMediumFunction, expression (Comma expression)?> | call<FormatLongFunction, expression (Comma expression)?> |
+  call<UpperCaseFunction, one> | call<LowerCaseFunction, one> | call<NormalizeSpaceFunction, one> | call<TrimFunction, one> |
+  call<TrimLeftFunction, one> | call<TrimRightFunction, one> | call<PadLeftFunction, three> | call<PadRightFunction, three> |
+  call<ReplaceFunction, three> | call<ReplaceRegexFunction, three> | call<RepeatFunction, two> | call<UrlEncodeFunction, one> |
+  call<CapitalizeFirstFunction, one> | call<PreferredLanguageFunction, one> | call<PreferredLanguageTextFunction, one>
+}
+
+dateFunction {
+  call<Date, one> | call<AddDuration, two> | call<SubtractDuration, two> | CurrentDateFunction OpenParenthesis CloseParenthesis
+}
+
+timeFunction { call<Time, one> | CurrentTimeFunction OpenParenthesis CloseParenthesis }
+
+durationFunction { call<DayTimeDurationFunction, one> | call<YearMonthDurationFunction, one> }
+
+sequenceFunction {
+  call<DistinctValuesFunction, one> | call<GetDuplicatesFunction, one> | call<UnionFunction, two> |
+  call<IntersectFunction, two> | call<ExceptFunction, two> | call<SortFunction, one> | call<ReverseFunction, one> |
+  call<SubsequenceFunction, two (Comma expression)?> | call<SplitFunction, two>
+}
+
+// ---- Declarations and context declarations, shared with rules files ----
+
+VariableDeclaration { Let variableInitializer Semicolon }
+
+// After a variable list, a comma may lead to the context or to the next variable (~contextComma).
+ContextDeclarationBlock { (VariableList ~contextComma Comma)? ContextDeclaration (Comma VariableList)? }
+
+ContextDeclaration { ContextVariableInitializer | fieldContext | nodeContext | Dot | DotDot | Slash }
+
+VariableList { variableInitializer (~contextComma Comma variableInitializer)* }
+
+variableInitializer {
+  TypedVariableInitializer { TypeDeclaration Colon VariablePrefix UnquotedIdentifier Assignment expression } |
+  DynamicVariableInitializer { Dynamic Colon VariablePrefix UnquotedIdentifier Assignment DynamicFunctionInvocation }
+}
+
+ContextVariableInitializer {
+  ContextType Colon VariablePrefix UnquotedIdentifier Assignment (fieldContext | nodeContext | Slash)
+}
+
+// ---- Rules files ----
+
+// The includes before the declarations and those after them, instead of the template lines or among
+// the stages, read the same (~include).
+includeDirective { IncludeDirective IncludePath ~include }
+
+ApiEndpointDeclaration { Endpoint StringLiteral (At StringLiteral)? Semicolon }
+
+DynamicFunctionDeclaration {
+  Let Dynamic Colon FunctionPrefix UnquotedIdentifier OpenParenthesis ParameterList? CloseParenthesis Call Api
+  StringLiteral? OnErrorClause? Semicolon
+}
+
+OnErrorClause { Comma? On Error (Warn | Reject) StringLiteral? }
+
+GlobalVariableDeclaration { VariableDeclaration }
+
+ValidationStage { StageHeaderStart StageIdentifier StageHeaderEnd StageVariableDeclaration* RuleSet+ }
+
+StageVariableDeclaration { VariableDeclaration }
+
+RuleSet {
+  WithClause Rules Semicolon? |
+  WithClause ConditionalRules FallbackRule Semicolon?
+}
+
+WithClause { With ContextDeclarationBlock }
+
+// A run of conditional rules is read once, then the token after it tells whether it starts the rules
+// or is the conditional rules before a fallback. The run has no node, so the trees are as in Efx.g4.
+Rules {
+  conditionalRuleRun (SimpleRule (SimpleRule | ConditionalRule)*)? |
+  SimpleRule (SimpleRule | ConditionalRule)*
+}
+
+ConditionalRules { conditionalRuleRun }
+
+conditionalRuleRun { ConditionalRule+ }
+
+SimpleRule { (AssertClause | ReportClause) AsClause ForClause InClause ScopeClause? }
+
+ConditionalRule { WhenClause (AssertClause | ReportClause) AsClause ForClause InClause ScopeClause? }
+
+FallbackRule { (OtherwiseAssertClause | OtherwiseReportClause) AsClause ForClause InClause ScopeClause? }
+
+WhenClause { When expression }
+
+AssertClause { Assert expression }
+
+ReportClause { Report expression }
+
+AsClause { As Severity RuleId }
+
+Severity { Error | Warning | Info }
+
+RuleId { RuleIdentifier }
+
+ForClause { FOR (SimpleFieldReference | SimpleNodeReference) }
+
+OtherwiseAssertClause { OtherwiseAssert expression }
+
+OtherwiseReportClause { OtherwiseReport expression }
+
+InClause { IN noticeTypeList }
+
+ScopeClause { Scope (ScopeAnnotation Flag? | Flag ScopeAnnotation?) }
+
+ScopeAnnotation { Pre | Post }
+
+Flag { HashPrefix UnquotedIdentifier }
+
+noticeTypeList {
+  AnyNoticeTypes { Star | Any } |
+  ExplicitNoticeTypes { NoticeTypeRange (Comma NoticeTypeRange)* }
+}
+
+NoticeTypeRange { NoticeType (Minus NoticeType)? }
+
+NoticeType { IntegerLiteral | Identifier }
+
+// ---- Template files ----
+
+OtherSections { NavigationSection SummarySection? | SummarySection NavigationSection? }
+
+SummarySection { SummarySectionHeader (TemplateLine* | includeDirective) }
+
+NavigationSection { NavigationSectionHeader (TemplateLine* | includeDirective) }
+
+GlobalDeclaration { VariableDeclaration | DictionaryDeclaration | FunctionDeclaration }
+
+DictionaryDeclaration { Let VariablePrefix UnquotedIdentifier DictionaryIndexClause DictionaryKeyClause Semicolon }
+DictionaryIndexClause { Index fieldContext }
+DictionaryKeyClause { By expression }
+
+TemplateLine {
+  Indentation? OutlineNumber? (With ContextDeclarationBlock)? (ChooseTemplate | DisplayTemplate | InvokeTemplate) Semicolon |
+  Indentation? OutlineNumber? StartExpressionBlock ContextDeclarationBlock EndBlock template CRLF
+}
+
+TemplateDeclaration { Indentation? Let TemplateDefinition (ChooseTemplate | DisplayTemplate | InvokeTemplate) Semicolon }
+
+Indentation { Tabs | Spaces | MixedIndent }
+
+template { templateFragment }
+
+templateFragment {
+  SecondaryTemplate { LineBreak templateFragment? } |
+  TextTemplate { TextBlock templateFragment? } |
+  LabelTemplate { labelBlock templateFragment? } |
+  ExpressionTemplate { formattedExpressionBlock templateFragment? } |
+  LinkedTextTemplate { LinkedTextBlock templateFragment? } |
+  LinkedLabelTemplate { LinkedLabelBlock templateFragment? } |
+  LinkedExpressionTemplate { LinkedExpressionBlock templateFragment? }
+}
+
+LinkBlock { StartHyperlinkBlock expression EndBlock }
+
+LinkedTextBlock { TextBlock LinkBlock }
+LinkedLabelBlock { labelBlock LinkBlock }
+LinkedExpressionBlock { formattedExpressionBlock LinkBlock }
+
+formattedExpressionBlock {
+  FieldExpressionBlock { StartExpressionBlock FieldId !fieldBlock FormatOptions? EndBlock } |
+  ComputedExpressionBlock { StartExpressionBlock expression FormatOptions? EndBlock } |
+  ContextFieldExpressionBlock { ShorthandFieldValueReferenceFromContextField }
+}
+
+FormatOptions { Pipe FormatSpecifier FormatNoUnit? | Pipe FormatNoUnit | Pipe FormatNoFormatting }
+
+FormatSpecifier { FormatDecimals | FormatShort | FormatMedium | FormatLong }
+
+LineBreak { NewLine }
+
+TextBlock {
+  (Whitespace | FreeText | OtherEscapeSequence | CharacterReference)
+  (!text (Whitespace | FreeText | OtherEscapeSequence | CharacterReference))*
+}
+
+@skip {} {
+  labelBlock {
+    StandardLabelReference { StartLabelBlock assetType Pipe labelType Pipe AssetId (Semicolon Pluraliser)? EndBlock } |
+    ComputedLabelReference { StartLabelBlock ExpressionBlock (Semicolon Pluraliser)? EndBlock } |
+    ShorthandBtLabelReference { StartLabelBlock labelType Pipe BtId (Semicolon Pluraliser)? EndBlock } |
+    ShorthandFieldLabelReference { StartLabelBlock labelType Pipe FieldId (Semicolon Pluraliser)? EndBlock } |
+    ShorthandLabelReferenceFromContext { StartLabelBlock LabelType (Semicolon Pluraliser)? EndBlock } |
+    ShorthandIndirectLabelReference { StartLabelBlock FieldId (Semicolon Pluraliser)? EndBlock } |
+    // The alternative and its one token have the same name; as in ANTLR's tree, the node holds the token.
+    ShorthandIndirectLabelReferenceFromContextField { sharpValue }
+  }
+
+  // An expression block in a label may be the asset type or the label type (~labelExpression).
+  assetType { AssetType | ExpressionBlock ~labelExpression }
+  labelType { LabelType | ExpressionBlock ~labelExpression }
+  AssetId { BtId | FieldId | otherAssetId | ExpressionBlock }
+  otherAssetId { OtherAssetId | AssetType | LabelType }
+  Pluraliser { ExpressionBlock }
+}
+
+TemplateDefinition { Template Colon Identifier OpenParenthesis ParameterList? CloseParenthesis }
+
+ChooseTemplate { WhenBlock+ OtherwiseBlock? }
+DisplayTemplate { Display template }
+InvokeTemplate { Invoke Identifier OpenParenthesis ArgumentList? CloseParenthesis }
+
+WhenBlock { WhenDisplayTemplate | WhenInvokeTemplate }
+WhenDisplayTemplate { When expression DisplayTemplate }
+WhenInvokeTemplate { When expression InvokeTemplate }
+
+OtherwiseBlock { OtherwiseDisplayTemplate | OtherwiseInvokeTemplate }
+OtherwiseDisplayTemplate { Otherwise Display? template }
+OtherwiseInvokeTemplate { Otherwise InvokeTemplate }
+
+FunctionDeclaration {
+  Let TypeDeclaration Colon FunctionPrefix UnquotedIdentifier OpenParenthesis ParameterList? CloseParenthesis
+  Assignment expression Semicolon
+}
+
+// ---- Tokens ----
+
+// The tokens whose reading depends on the lexer's mode, read by src/lexer/LexerModes.js: the skip
+// tokens, template text, label words, the tokens that take whitespace with them, the words and
+// phrases the lexer reserves (src/generated/words.js), the include directive, which is read only
+// at the start of a line, and the slash before an attribute's name.
+@external tokens lexerModes from "./lexer/LexerModes.js" {
+  space, Comment, FreeText, AssetType, LabelType, OtherAssetId, Semicolon,
+  FormatShort, FormatMedium, FormatLong, FormatNoUnit, FormatNoFormatting,
+  With, Compute, Select, Let, When, Otherwise, Display, Invoke, Index, By, Template, Dynamic,
+  And, Or, Is, In, Like, Present, Empty, Unique, Has, No, Duplicates, Every, Some, Satisfies, If, Then, Else, For, Return,
+  Distinct, Always, Never, True, False, At, Not, Text, Number, Indicator, Date, Time, Duration, ContextType,
+  CountFunction, SubstringFunction, SubstringBeforeFunction, SubstringAfterFunction, ContainsFunction, StartsWithFunction,
+  EndsWithFunction, StringLengthFunction, IndexOfSubstringFunction, SumFunction, MinFunction, MaxFunction, AverageFunction,
+  AbsoluteFunction, RoundFunction, RoundDownFunction, RoundUpFunction, YearFunction, MonthFunction, DayFunction,
+  HoursFunction, MinutesFunction, SecondsFunction, YearsFunction, MonthsFunction, DaysFunction, FormatNumberFunction,
+  FormatShortFunction, FormatMediumFunction, FormatLongFunction, UpperCaseFunction, LowerCaseFunction,
+  NormalizeSpaceFunction, TrimFunction, TrimLeftFunction, TrimRightFunction, PadLeftFunction, PadRightFunction,
+  RepeatFunction, ReplaceFunction, ReplaceRegexFunction, UrlEncodeFunction, CapitalizeFirstFunction, ConcatFunction,
+  StringJoinFunction, CurrentDateFunction, CurrentTimeFunction, DayTimeDurationFunction, YearMonthDurationFunction,
+  AddDuration, SubtractDuration, DistinctValuesFunction, CountDuplicatesFunction, GetDuplicatesFunction, UnionFunction,
+  IntersectFunction, ExceptFunction, SequenceEqualFunction, SortFunction, ReverseFunction, SubsequenceFunction,
+  IndexOfFunction, PreferredLanguageFunction, PreferredLanguageTextFunction, SplitFunction,
+  Endpoint, Call, Api, On, Warn, Reject, Error, Warning, Info, Assert, Report, OtherwiseAssert, OtherwiseReport,
+  As, FOR, IN, Any, Scope, IncludeDirective, AttributeSlash[@name=Slash],
+  PublicationDate, JustificationCode, JustificationDescription, PrivacyCode, WasWithheld, IsWithheld, IsWithholdable,
+  IsDisclosed, IsMasked, RawValue, PreferredLanguage, PreferredLanguageText
+}
+
+// The tokens that read the same wherever the parser can take them, named and spelled as in
+// EfxLexer.g4, grouped by the mode that reads them.
 @tokens {
-  EOL { "\n" | "\r\n" | "\r" }
-  LET { "LET" | "let" }
-  WITH { "WITH" | "with" }
-  WHEN {  "WHEN" | "when" }
-  OTHERWISE { "OTHERWISE" | "otherwise" }
-  DISPLAY { "DISPLAY" | "display" }
-  INVOKE {  "INVOKE" | "invoke" }
-  INDEX {  "INDEX" | "index" }
-  BY {  "BY" | "by" }
-  SharpValue { SHARP "value" }
-  DollarValue { DOLLAR "value" }
+  eol { "\r"? "\n" | "\r" | "\f" }
+  comment { "//" ![\r\n\f]* }
 
-  SHARP { "#" }
-  DOLLAR { "$" }
-  AT { "@" }
-  
+  // DEFAULT mode.
+  IncludePath { '"' !["\r\n]+ '"' $[ \t]* comment? eol* }
+  MixedIndent { ($[\t]+ $[ ]+ | $[ ]+ $[\t]+) $[ \t]* }
+  Tabs { $[\t]+ }
+  Spaces { $[ ]+ }
+  OutlineNumber { @digit+ }
+  SummarySectionHeader { "---" "-"* $[ \t]* "SUMMARY" $[ \t]* "---" "-"* eol* }
+  NavigationSectionHeader { "---" "-"* $[ \t]* "NAVIGATION" $[ \t]* "---" "-"* eol* }
+  StageHeaderStart { "---" "-"* $[ \t]* ("STAGE" | "stage") $[ \t]+ }
 
-  LB { "{" }
-  RB { "}" }
-  LP { "(" }
-  RP { ")" }
+  // STAGE_HEADER mode.
+  StageIdentifier { $[a-zA-Z0-9] ($[a-zA-Z0-9_\-]* $[a-zA-Z0-9_])? }
+  StageHeaderEnd { $[ \t]* "---" "-"* eol* }
 
+  // TEMPLATE mode.
+  NewLine { $[ \t]* "\\n" $[ \t]* }
+  CharacterReference { "&" ("#" (@digit+ | $[xX] $[0-9A-Fa-f]+) | $[a-zA-Z]+) ";" }
+  CRLF { eol+ }
+  ShorthandFieldValueReferenceFromContextField { "$value" }
+  sharpValue[@name=ShorthandIndirectLabelReferenceFromContextField] { "#value" }
+  StartSelectorBlock { "&{" }
+  StartLabelBlock { "#{" }
+  StartHyperlinkBlock { $[ \t]* "@{" }
+  Whitespace { $[ \t]+ }
+  OtherEscapeSequence { "\\" $[dDwWsStrvfbcxu0"'\\] }
+
+  // FORMAT mode.
+  FormatDecimals { @digit }
+
+  // LABEL mode.
   Pipe { "|" }
-  
-  // Keywords - All EFX keywords from the lexer
-  Keyword {    
-    // Logical operators
-    "and" | "AND" |
-    "or" | "OR" |
-    "not" | "NOT" |
-    
-    // Comparison/test keywords
-    "is" | "IS" |
-    "in" | "IN" |
-    "like" | "LIKE" |
-    "present" | "PRESENT" |
-    "empty" | "EMPTY" |
-    "unique" | "UNIQUE" |
-    
-    // Quantifiers
-    "every" | "EVERY" |
-    "some" | "SOME" |
-    "satisfies" | "SATISFIES" |
-    
-    // Conditional keywords
-    "if" | "IF" |
-    "then" | "THEN" |
-    "else" | "ELSE" |
-    
-    // Loop/iteration keywords
-    "for" | "FOR" |
-    "return" | "RETURN" |
-    
-   
-    // XPath-like axis keywords
-    "preceding" | "preceding-sibling" |
-    "following" | "following-sibling" |
-    "ancestor" | "ancestor-or-self" |
-    "descendant" | "descendant-or-self" |
-    "child" | "parent" | "self"
-    
-  }
 
-  BuiltInFunction {
-    "count" | "substring" | "string" |
-    "contains" | "starts-with" | "ends-with" |
-    "string-length" | "sum" | "format-number" |
-    "upper-case" | "lower-case" |
-    "concat" | "string-join" |
-    "day-time-duration" | "year-month-duration" |
-    "add-measure" | "subtract-measure" |
-    "distinct-values" | "value-union" |
-    "value-intersect" | "value-except" |
-    "sequence-equal" |
-    "preferred-language" | "preferred-language-text"
-  }
-
-  LabelKeyword {
-    // Asset types
-    "business-term" | "field" | "node" |
-    "group" | "view" | "notice" |
-    "codelist" | "code" |
-    "auxiliary" | "rule" | "expression" |
-    "interval" | "pattern" |
-    
-    // Label types
-    "name" | "when-true" | "when-false" |
-    "description" | "hint" | "template" | "text"
-  }
-  
-  
-  // Literals
-  Literal { StringLiteral | NumericLiteral | BooleanLiteral | DateLiteral | TimeLiteral | DurationLiteral }
-  StringLiteral { '"' (!["\\] | "\\" _)* '"' | "'" (!['\\] | "\\" _)* "'" }
-  NumericLiteral { @digit+ ("." @digit+)? }
-  BooleanLiteral { "true" | "false" | "TRUE" | "FALSE" | "ALWAYS" | "always" | "NEVER" | "never" }
-  DateLiteral { @digit @digit @digit @digit '-' @digit @digit '-' @digit @digit ((('+' | '-') @digit @digit Colon @digit @digit) | 'Z') }
-  TimeLiteral { @digit @digit Colon @digit @digit Colon @digit @digit ((("+" | "-") @digit @digit Colon @digit @digit) | "Z") }
-  DurationLiteral { "-"? "P" @digit+ ("W" | "D" | "Y" | "M") }
-  
-  // Special pattern for data type declarations - matches type name + colon as one token
-  Type { ("indicator" | "number" | "text" | "code" | "date" | "time" | "measure" | "context") Colon }
-
- 
-  // Identifiers - Field IDs (with digits) and Node IDs (without digits)
-  FieldId { ("BT" | "OPP" | "OPT" | "OPA") "-" @digit+ ("(" $[a-zA-Z_] ")")? ("-" $[a-zA-Z_] $[a-zA-Z0-9_]*)* }
-  NodeId { "ND-" $[a-zA-Z_] $[a-zA-Z0-9_-]* }
-  Variable { ("$" | "?") $[a-zA-Z_] $[a-zA-Z0-9_-]* }
-  Identifier { $[a-zA-Z_] $[a-zA-Z0-9_-]* }
-
-  // Comments - MUST come before Operator in precedence
-  Comment { "//" ![\r\n]* }
-  
-  // Operators
-  Operator { "==" | "!=" | ">=" | "<=" | ">" | "<" | "+" | "-" | "*" | "/" | "%" | "=" | "::" | ".." }
-
- Parenthesis {
-   "(" | ")"
- }
-  Brace { LB | RB }
-
-  Bracket { "[" | "]"}
-
-  Punctuation { Coma | Colon | "." | "#" }
-  
-  // Delimiters
-  Delimiter {  Bracket | Brace | Parenthesis | Pipe }
-
-  Coma { "," }
-
+  // EXPRESSION mode, and IDENTIFIER mode for the name after a prefix.
+  OpenParenthesis { "(" }
+  CloseParenthesis { ")" }
+  OpenBracket { "[" }
+  CloseBracket { "]" }
+  ColonColon { "::" }
+  StartExpressionBlock { "{" | "${" }
+  EndBlock { "}" }
+  DayTimeDurationLiteral { "-"? "P" @digit+ $[WD] }
+  YearMonthDurationLiteral { "-"? "P" @digit+ $[YM] }
+  BtId { ("BT" | "OPP" | "OPT" | "OPA") "-" @digit+ }
+  FieldId { BtId ("(" (("BT" "-" @digit+) | $[a-z]) ")")? ("-" $[a-zA-Z_] $[a-zA-Z_0-9]*)+ }
+  NodeId { "ND-" $[a-zA-Z0-9]+ }
+  RuleIdentifier { "R-" $[a-zA-Z0-9] $[a-zA-Z0-9] $[a-zA-Z0-9] "-" $[a-zA-Z0-9] $[a-zA-Z0-9] $[a-zA-Z0-9] }
+  Pre { "@PRE" }
+  Post { "@POST" }
+  VariablePrefix { "$" }
+  AtPrefix { "@" }
+  HashPrefix { "#" }
+  FunctionPrefix { "?" }
+  Identifier { $[a-zA-Z_] ("-"? $[a-zA-Z_0-9]+)* }
+  UnquotedIdentifier[@name=Identifier] { $[a-zA-Z_] ("-"? $[a-zA-Z_0-9]+)* }
+  IntegerLiteral { @digit+ }
+  DecimalLiteral { @digit? "." @digit+ }
+  StringLiteral { '"' (!["\\\r\n] | "\\" _)* '"' | "'" (!['\\\r\n] | "\\" _)* "'" }
+  hex { $[0-9a-fA-F] }
+  hex4 { hex hex hex hex }
+  UuidV4Literal { "{" hex4 hex4 "-" hex4 "-" hex4 "-" hex4 "-" hex4 hex4 hex4 "}" }
+  zone { ("+" | "-") @digit @digit ":" @digit @digit }
+  DateLiteral { @digit @digit @digit @digit "-" @digit @digit "-" @digit @digit (zone | "Z") }
+  TimeLiteral { @digit @digit ":" @digit @digit ":" @digit @digit (zone | "Z") }
+  Assignment { "=" }
+  Comparison { "==" | "!=" | ">" | ">=" | "<" | "<=" }
+  Star { "*" }
+  Slash { "/" }
+  Percent { "%" }
+  Plus { "+" }
+  Minus { "-" }
+  Comma { "," }
+  Ellipsis { "..." }
+  DotDot { ".." }
+  Dot { "." }
   Colon { ":" }
-  
-  // Space
-  space { $[\u0020\u0009]+ }
 
-  FreeText { ![\u0020\u0009\r\n#$@{};]+ }
-  
-  // DurationLiteral must come before Identifier in precedence
-  @precedence { Comment, LET, WITH, WHEN, OTHERWISE, DISPLAY, INVOKE, INDEX, BY, SharpValue, Type, BuiltInFunction, LabelKeyword, Keyword, Literal, BooleanLiteral. DurationLiteral, NodeId, FieldId, Variable, Identifier, Operator, Punctuation, LB, RB, LP, RP, Delimiter, Coma, Pipe, FreeText }
+  @precedence { MixedIndent, Tabs, Spaces }
+  @precedence { NewLine, StartHyperlinkBlock, Whitespace }
+  @precedence { DateLiteral, TimeLiteral, DayTimeDurationLiteral, YearMonthDurationLiteral, NodeId, FieldId, BtId, Identifier, DecimalLiteral, IntegerLiteral }
+  @precedence { Comparison, Assignment }
+  @precedence { StageHeaderStart, Minus }
+  @precedence { Ellipsis, DotDot, Dot }
+  @precedence { DecimalLiteral, Dot }
 }
 
-@skip { space }
-        
+@skip { space | Comment }
+
+@context lexerContext from "./lexer/LexerContext.js"
+
 @detectDelim
 
-@external propSource efxHighlighting from "./efxTheme.js"
+@external propSource efxHighlighting from "./efxHighlighting.js"

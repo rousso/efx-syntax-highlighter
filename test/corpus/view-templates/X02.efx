@@ -1,0 +1,62 @@
+// View X02
+// File generated from metadata database
+let $lot-by-lot-or-gol-id index BT-137-Lot by BT-137-Lot;
+let $lot-name-by-lot-or-gol-id index BT-21-Lot by BT-137-Lot;
+let text*:$tender_ids_global = OPT-321-Tender;
+let indicator:?exists-common-value(text*:$seq1, text*:$seq2) = (count(value-intersect($seq1, $seq2)) > 0); 
+let template:currency-value(text:$field-pred, text:$field) DISPLAY #{field|name|${$field}}: ${format-number(number($field-pred), '###,##0.##')};
+// #{${concat('code|name|currency.', ${$field/@currencyID})}}
+let template:role-and-name(text:$label-id, text:$org-tpo-id) WHEN $org-tpo-id in OPT-200-Organization-Company DISPLAY #{${$label-id}}: ${BT-500-Organization-Company[OPT-200-Organization-Company == $org-tpo-id]:preferredLanguageText} OTHERWISE DISPLAY #{${$label-id}}: ${BT-500-Organization-Company[$org-tpo-id in OPT-201-Organization-TouchPoint]:preferredLanguageText} - ${BT-500-Organization-TouchPoint[OPT-201-Organization-TouchPoint == $org-tpo-id]:preferredLanguageText};
+let template:roles-and-org-names(text:$label-id, text*:$org-ids) DISPLAY #{${$label-id}}: ${for text:$org-id in $org-ids return BT-500-Organization-Company[OPT-200-Organization-Company == $org-id]:preferredLanguageText};
+ // GLOBALS 
+// let $lot-name-by-gol-id index BT-21-Lot by ( for text:$this-lot-id in BT-137-Lot return BT-330-Procedure[ $this-lot-id in BT-1375-Procedure]);
+// let text:?org-tpo-name(text:$id) = if ($id in OPT-201-Organization-TouchPoint) then concat(BT-500-Organization-Company[$id in OPT-201-Organization-TouchPoint], ' - ', BT-500-Organization-TouchPoint[$id in OPT-201-Organization-TouchPoint]) else BT-500-Organization-Company[$id in OPT-200-Organization-Company];
+9 WITH ND-Root DISPLAY #{auxiliary|text|object}; // 9 Object
+	0 WITH ND-Root DISPLAY #{auxiliary|text|legal-basis}:; // Legal basis
+		WITH BT-01-notice DISPLAY #{BT-01-notice}; // Regulation reference
+		WITH OPP-100-Business DISPLAY #{name|OPP-100}: #value; // This notice contains information relevant to
+	1 WITH ND-Root DISPLAY #{auxiliary|text|company}; // 9.1 Name and address of the company-society
+		WITH BT-500-Business DISPLAY #{name|BT-500}: $value; // Official name
+		WITH BT-501-Business-National DISPLAY #{name|BT-501}: $value; // Identifier of the organisation
+		WITH BT-510(a)-Business DISPLAY #{name|BT-510}: ${BT-510(a)-Business} ${BT-510(b)-Business} ${BT-510(c)-Business} ; // Postal address
+		WITH BT-513-Business DISPLAY #{name|BT-513}: $value; // Town
+		WITH BT-512-Business DISPLAY #{name|BT-512}: $value; // Postal code
+		WITH BT-507-Business DISPLAY #{name|BT-507}: #value; // Country subentity
+		WITH BT-514-Business DISPLAY #{name|BT-514}: #value; // Country
+		WITH BT-502-Business DISPLAY #{name|BT-502}: $value; // Contact point
+		WITH BT-506-Business DISPLAY #{name|BT-506}: $value; // E-mail
+		WITH BT-503-Business DISPLAY #{name|BT-503}: $value; // Telephone
+		WITH BT-739-Business DISPLAY #{name|BT-739}: $value; // Fax
+		WITH BT-505-Business DISPLAY #{name|BT-505}: $value; // Internet address
+	2 WITH OPP-105-Business DISPLAY #{name|OPP-105-Business}: #value; // 9.2 Sector of activity
+	3 WITH ND-Root DISPLAY #{auxiliary|text|place-registration}; // 9.3 Place of registration
+		WITH OPP-110-Business DISPLAY #{name|OPP-110}: $value; // Town
+		WITH OPP-111-Business DISPLAY #{name|OPP-111}: $value; // Post code
+		WITH OPP-112-Business DISPLAY #{name|OPP-112}: $value; // Country
+		WITH BT-501-Business-European DISPLAY #{name|BT-501}: $value; // Registration number
+		WITH OPP-113-Business-European DISPLAY #{name|OPP-113}: $value; // Date of registration
+	4 WITH ND-Root DISPLAY #{auxiliary|text|publication-gazette}; // 9.4 Publication in the official gazette
+		WITH OPP-120-Business DISPLAY #{name|OPP-120}: $value; // Name of publication
+		WITH OPP-121-Business DISPLAY #{name|OPP-121}: $value; // Title of the announcement
+		WITH OPP-122-Business DISPLAY #{name|OPP-122}: $value; // URL of the announcement
+		WITH OPP-124-Business DISPLAY #{name|OPP-124}: $value; // Gazette Issue Identifier / Issue of the publication
+		WITH OPP-123-Business DISPLAY #{name|OPP-123}: $value; // Date of publication of the announcement
+	5 WITH ND-Root[OPP-130-Business is present] DISPLAY #{name|OPP-130}: ${OPP-130-Business}; // 9.5 Additional information
+10 WITH ND-Root[BT-758-notice is present] DISPLAY #{auxiliary|text|change}; // 10 Change
+	WITH BT-758-notice DISPLAY #{name}: $value; // Change Notice Version Identifier
+	WITH BT-140-notice DISPLAY #{name}: #value; // Change Reason Code
+	WITH ND-ChangeReason[BT-762-notice is present] DISPLAY #{field|name|BT-762-notice}: ${BT-762-notice}; // Change Reason Description
+0 WITH ND-Root DISPLAY #{auxiliary|text|notice-information}; // Notice information
+	WITH BT-701-notice DISPLAY #{name}: ${BT-701-notice} - ${BT-757-notice} ; // Notice identifier / version
+	WITH BT-03-notice DISPLAY #{name}: #value; // Form type
+	WITH BT-02-notice DISPLAY #{name}: #value; // Notice type
+	WITH OPP-070-notice DISPLAY #{name}: $value; // Notice subtype
+	WITH OPP-131-Business DISPLAY #{name|OPP-131}: $value; // Sender's email address
+	WITH BT-05(a)-notice DISPLAY #{field|name|BT-05(a)-notice}: ${BT-05(a)-notice} ${BT-05(b)-notice} ; // Notice dispatch date and time
+	WITH BT-803(d)-notice DISPLAY #{field|name|BT-803(d)-notice}: ${BT-803(d)-notice} ${BT-803(t)-notice} ; // Notice dispatch date (eSender)
+	WITH BT-702(a)-notice DISPLAY #{field|name|BT-702(a)-notice}: #{BT-702(a)-notice} #{BT-702(b)-notice} ; // Languages in which this notice is officially available
+	WITH OPP-010-notice DISPLAY #{name}: $value; // Notice publication number
+	WITH OPP-011-notice DISPLAY #{name}: $value; // OJ S issue number
+	WITH OPP-012-notice DISPLAY #{name}: $value; // Publication date
+--- NAVIGATION --- // NAVIGATION
+--- SUMMARY --- // SUMMARY

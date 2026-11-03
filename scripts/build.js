@@ -16,19 +16,19 @@ try {
   console.log('Parser generated successfully in dist/.');
 
   // Copy all relevant JS files from src to dist (except parser)
-  const filesToCopy = ['efxLanguage.js', 'efxTheme.js', 'index.js'];
+  // The parser loads efxHighlighting.js and the lexer/ folder, which loads generated/words.js, from
+  // dist/; the language loads the completion/ folder, which loads generated/completions.js. A file
+  // missing from src/ fails the build.
+  const filesToCopy = ['efxLanguage.js', 'efxHighlighting.js', 'efxSymbols.js', 'efxTheme.js', 'index.js',
+    'generated/words.js', 'generated/completions.js'];
   for (const file of filesToCopy) {
-    const srcFile = path.join(srcDir, file);
     const distFile = path.join(distDir, file);
-    if (fs.existsSync(srcFile)) {
-      fs.copyFileSync(srcFile, distFile);
-    }
+    fs.mkdirSync(path.dirname(distFile), { recursive: true });
+    fs.copyFileSync(path.join(srcDir, file), distFile);
   }
-  // Copy efxTheme.js for Lezer external propSource
-  const themeSrc = path.join(srcDir, 'efxTheme.js');
-  const themeDist = path.join(distDir, 'efxTheme.js');
-  if (fs.existsSync(themeSrc)) {
-    fs.copyFileSync(themeSrc, themeDist);
+  for (const folder of ['lexer', 'completion']) {
+    fs.rmSync(path.join(distDir, folder), { recursive: true, force: true });
+    fs.cpSync(path.join(srcDir, folder), path.join(distDir, folder), { recursive: true });
   }
   console.log('Copied source files to dist/.');
 } catch (err) {
