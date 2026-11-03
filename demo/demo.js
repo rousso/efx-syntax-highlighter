@@ -8,11 +8,11 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { efx, efxSymbols, efxTheme } from '/dist/index.js';
 
-// The text of each kind: a file of the repository, or a text of its own.
-const TEXTS = {
-  template: { file: '/test/sample.efx' },
-  rules: { file: '/test/corpus/validation/stage-4m.efx' },
-  expression: { text: 'WITH ND-Root COMPUTE BT-01-notice is present' },
+// The file the editor shows for each kind of EFX text.
+const FILES = {
+  template: '/test/sample.efx',
+  rules: '/test/corpus/validation/stage-4m.efx',
+  expression: '/demo/expression.efx',
 };
 
 const FIELD_ID = /\b(?:BT|OPP|OPT|OPA)-\d+(?:\((?:BT-\d+|[a-z])\))?(?:-[a-zA-Z_][a-zA-Z_0-9]*)+/g;
@@ -28,7 +28,7 @@ function idsIn(text, shape) {
 
 /** Shows the text of a kind in the editor, with the extensions of that kind. */
 async function show(kind) {
-  const { file, text = await (await fetch(file)).text() } = TEXTS[kind];
+  const text = await (await fetch(FILES[kind])).text();
   view.setState(EditorState.create({
     doc: text,
     extensions: [
