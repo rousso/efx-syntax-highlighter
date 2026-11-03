@@ -1,5 +1,6 @@
 // The oracle's side of the tree test: the tree the EFX-2 parser makes of a text read from one of its
-// tops, singleExpression or templateFile, with its nodes named as the editor's grammar names them:
+// tops, singleExpression, templateFile or rulesFile, with its nodes named as the editor's grammar
+// names them:
 //
 // - a rule is its context's name: the rule's name, or the label of its alternative when the
 //   alternatives are labelled, with a capital first letter;

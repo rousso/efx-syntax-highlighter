@@ -1,5 +1,6 @@
 // The editor's side of the tree test: the tree the editor's parser makes of a text read from one of
-// its tops, SingleExpression or TemplateFile. Comments are left out, as the lexer hides them.
+// its tops, SingleExpression, TemplateFile or RulesFile. Comments are left out, as the lexer hides
+// them.
 
 import { parser } from '../../dist/efx-parser.js';
 import { Tree } from './Tree.js';
