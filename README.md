@@ -10,7 +10,7 @@ The parser is a [Lezer](https://lezer.codemirror.net/) grammar that follows the 
 npm install @op-ted/efx-syntax-highlighter
 ```
 
-The package is an ES module. It needs the CodeMirror packages it lists as dependencies; a bundler, or an import map in the page, resolves them.
+The package is an ES module. It needs the CodeMirror packages it lists as dependencies; a bundler resolves them, or an import map in the page, which must then name their own dependencies too (`demo/index.html` has one).
 
 ## Use
 
@@ -23,7 +23,7 @@ import { efx, efxSymbols, efxTheme } from '@op-ted/efx-syntax-highlighter';
 const view = new EditorView({
   parent: document.getElementById('editor'),
   state: EditorState.create({
-    doc: text,
+    doc: text, // the EFX text to edit
     extensions: [
       efx('template'),
       efxSymbols.of({ fields: ['BT-01-notice', 'BT-26(m)-Procedure'], nodes: ['ND-Root', 'ND-Lot'] }),
@@ -69,7 +69,7 @@ npm run sync    # copies the words, the corpus, the ANTLR oracle and the complet
 
 ## Publishing
 
-Only `dist/` is published. Pushing a tag that matches the version in `package.json` (for example `0.3.0`) runs the Publish workflow, which builds, tests and publishes the package to npm with provenance.
+Only `dist/` is published, with the README and the licence. Pushing a tag of the form `x.y.z` runs the Publish workflow, which builds, tests and publishes to npm, with provenance, the version written in `package.json`: the tag does not set the version, so tag the commit that sets it, with the same number (for example `0.3.0`).
 
 ## License
 

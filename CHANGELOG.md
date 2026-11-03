@@ -43,6 +43,7 @@ The colours follow the new grammar's nodes; the palette is unchanged. Against 0.
 
 - The package's entry point loads. 0.2.1 re-exported an `efxHighlightStyle` that did not exist and imported its modules without their `.js` suffix.
 - `efx()` works in an editor. 0.2.1 gave CodeMirror the highlight tags as an extension, which CodeMirror refused.
+- The package declares `@lezer/lr` and `@lezer/highlight`, which it imports. They came only through `@codemirror/language`, which installers that keep each package to its declared dependencies do not allow. Nothing new is installed.
 
 ### Known limits
 
