@@ -160,6 +160,11 @@ const CHECKS = {
   'a field id with its part in parentheses is one word': () => {
     assert.equal(template('1 {ND-Root} ${BT-26(m‸').offered().from, '1 {ND-Root} ${'.length);
   },
+  'a number or a minus starts no word': () => {
+    assert.equal(expression('12‸').offered(), null);
+    assert.equal(expression('1 + -‸').offered(), null);
+    assert.equal(expression('1 + -co‸').offered().from, 'WITH ND-Root COMPUTE 1 + -'.length);
+  },
   'template text offers its words only when asked for': () => {
     assert.equal(template('1 WHEN BT-01-notice is present DISPLAY abc W‸').offered(), null);
     assert.ok(template('1 WHEN BT-01-notice is present DISPLAY abc W‸').labels().includes('WHEN'));

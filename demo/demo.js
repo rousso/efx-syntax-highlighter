@@ -26,9 +26,12 @@ function idsIn(text, shape) {
   return [...new Set(text.match(shape))];
 }
 
-/** Shows the text of a kind in the editor, with the extensions of that kind. */
+/** Shows the text of a kind in the editor, with the extensions of that kind, unless another kind was chosen meanwhile. */
 async function show(kind) {
   const text = await (await fetch(FILES[kind])).text();
+  if (choice.value !== kind) {
+    return;
+  }
   view.setState(EditorState.create({
     doc: text,
     extensions: [

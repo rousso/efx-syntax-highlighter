@@ -11,11 +11,21 @@ const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const PORT = Number(process.env.PORT ?? 8080);
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.efx': 'text/plain; charset=utf-8' };
 
+/** The file of the repository that a request asks for, or null when it asks for none. */
+function fileOf(request) {
+  try {
+    const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
+    const file = path.join(ROOT, pathname.endsWith('/') ? `${pathname}index.html` : pathname);
+    return file.startsWith(ROOT) ? file : null;
+  } catch {
+    return null;
+  }
+}
+
 http.createServer(async (request, response) => {
-  const pathname = decodeURIComponent(new URL(request.url, 'http://localhost').pathname);
-  const file = path.join(ROOT, pathname.endsWith('/') ? `${pathname}index.html` : pathname);
-  if (!file.startsWith(ROOT)) {
-    response.writeHead(403).end();
+  const file = fileOf(request);
+  if (file === null) {
+    response.writeHead(404).end();
     return;
   }
   try {

@@ -15,7 +15,12 @@ import { CompletionItems } from './CompletionItems.js';
 import { ExpectedTokens } from './ExpectedTokens.js';
 import { Variables } from './Variables.js';
 
-const WORD = /\$?(?:(?:BT|OPP|OPT|OPA)-\d+\((?:BT-\d*|[a-z])?\)?)?[\w-]*/;
+// The word before the cursor: a name, which starts with a letter as the lexer's Identifier does, or a
+// field id with its part in parentheses; with the `$` of a variable or without. A number or a minus
+// starts no word, so typing one opens no list and an option never replaces it.
+const NAME = String.raw`[A-Za-z_][\w-]*`;
+const FIELD_ID_WITH_PART = String.raw`(?:BT|OPP|OPT|OPA)-\d+\((?:BT-\d*|[a-z])?\)?[\w-]*`;
+const WORD = new RegExp(String.raw`\$?(?:${FIELD_ID_WITH_PART}|${NAME})?`);
 const WHOLE_WORD = new RegExp(`^${WORD.source}$`);
 
 // The tokens that decide the options besides the words: an expression can start, a field id, a
