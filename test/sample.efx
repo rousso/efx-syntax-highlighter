@@ -1,6 +1,6 @@
 // View 1
 // File generated from metadata database
-let text:$t='tom'; // global 1
+LET text:$t='tom'; // global 1
 //test
 1 WHEN OPT-300-Procedure-Buyer is present DISPLAY #{auxiliary|text|buyer};  // 1 Buyer
 	1 WITH ND-ContractingParty DISPLAY #{auxiliary|text|buyer}; // 1.1 Buyer
@@ -84,8 +84,8 @@ let text:$t='tom'; // global 1
 	1 {ND-Change} #{auxiliary|text|change} // 10.1 Change
 		{BT-13716-notice} #{field|name|BT-13716-notice}: ${BT-13716-notice} // Change Previous Section Identifier
 		{ND-Change[BT-141(a)-notice is present]} #{field|name|BT-141(a)-notice}: ${BT-141(a)-notice} // Change Description
-		with BT-719-notice 
-		display #{field|name|BT-718-notice}: $value; // Change Procurement Documents / Change Procurement Documents Date
+		WITH BT-719-notice 
+		DISPLAY #{field|name|BT-718-notice}: $value; // Change Procurement Documents / Change Procurement Documents Date
 0 DISPLAY #{auxiliary|text|notice-information}; // Notice information
 	{BT-701-notice} #{field|name|BT-701-notice}: ${BT-701-notice} - ${BT-757-notice} // Notice identifier / version
 	{BT-03-notice} #{field|name|BT-03-notice}: #{BT-03-notice} // Form type

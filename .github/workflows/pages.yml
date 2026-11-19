@@ -1,0 +1,62 @@
+name: Pages
+
+# Publishes the demo page to the repository's GitHub Pages site on every push to develop, so that the
+# site shows the editor as develop builds it. The repository's Pages source must be "GitHub Actions".
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Gather the site
+        run: npm run site
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}demo/
+
+    steps:
+      - name: Deploy the site
+        id: deployment
+        uses: actions/deploy-pages@v4
